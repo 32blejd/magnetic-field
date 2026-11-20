@@ -1,0 +1,440 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Magnetic Field – Neon Mockup</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #04050c; }
+  body { display: flex; align-items: center; justify-content: center; }
+  canvas { display: block; width: 100vw; height: auto; max-height: 100vh; aspect-ratio: 16 / 9; object-fit: contain; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script src="core.js"></script>
+<script>
+/* Playable mockup at 960×540 (half of 1920×1080). Game logic lives in core.js (shared with balance-sim.js).
+   Cursor over the board = magnet. SPACE or right click = Pulse (once unlocked). Keys 1–7 buy the upgrade in that row.
+   Upgrade buttons are clickable; hover a row for its description.
+   While the mouse is outside the window, an autopilot slowly wanders (demo only).
+   URL params: ?warm=N fast-forwards N seconds, ?rare=1 boosts rare coins, ?earned=N starts as if N coins were earned (unlocks, money), ?anti=1 boosts anti-coins (needs earned ≥ 25000). */
+const { W, H, BOARD: B, MAG_R, COIN_R, SPAWN_T, UPGRADES, COMBO, PULSE, ANTI } = Core;
+const PB = { x: 16, y: 472, w: 700, h: 52 };  // prestige bar (under the board only)
+const P = { x: 732, y: 16, w: 212, h: 508 };  // upgrade panel
+const GOAL = 1e6;
+const FONT = 'Consolas, "Courier New", monospace';
+const C = { cyan: '#00f0ff', magenta: '#ff2bd6', red: '#ff3355', amber: '#ffc21a', text: '#e6fbff', sub: '#5f9bb3' };
+const tierColor = (tier, t, ph = 0) =>
+  tier === 'gold' ? C.amber : tier === 'prism' ? `hsl(${(t * 220 + ph * 60) % 360}, 100%, 62%)` : tier === 'anti' ? C.red : C.cyan;
+
+const fmt = n => Math.floor(n).toLocaleString('en-US');
+const fmtShort = n => n >= 1e6 ? (n / 1e6).toFixed(2) + 'M' : n >= 1e4 ? (n / 1e3).toFixed(1) + 'k' : fmt(n);
+const glow = (ctx, c, b) => { ctx.shadowColor = c; ctx.shadowBlur = b; };
+const noGlow = ctx => { ctx.shadowBlur = 0; };
+const inRect = (p, r) => p.x >= r.x && p.x <= r.x + r.w && p.y >= r.y && p.y <= r.y + r.h;
+const mmss = s => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+const clamp = (v, a, b) => Math.min(Math.max(v, a), b);
+function hex(ctx, x, y, r, rot) {
+  ctx.beginPath();
+  for (let i = 0; i < 6; i++) { const a = rot + i * Math.PI / 3; ctx[i ? 'lineTo' : 'moveTo'](x + Math.cos(a) * r, y + Math.sin(a) * r); }
+  ctx.closePath();
+}
+function star(ctx, x, y, r1, r2, n, rot) {
+  ctx.beginPath();
+  for (let i = 0; i < n * 2; i++) { const a = rot + i * Math.PI / n, r = i % 2 ? r2 : r1; ctx[i ? 'lineTo' : 'moveTo'](x + Math.cos(a) * r, y + Math.sin(a) * r); }
+  ctx.closePath();
+}
+const easeOutBack = x => { const c = 1.9; return 1 + (c + 1) * (x - 1) ** 3 + c * (x - 1) ** 2; };
+
+/* ---------------- state ---------------- */
+const params = new URLSearchParams(location.search);
+if (params.get('rare')) { Core.TIERS[0].chance = .3; Core.TIERS[1].chance = .35; }
+if (params.get('anti')) { Core.ANTI.chance = .3; }
+const st = Core.createState(7);
+if (params.get('earned')) { st.money = st.totalEarned = Number(params.get('earned')); }
+const fx = { parts: [], floats: [], earned: [], flash: {}, banners: [], shake: 0, shocks: [] };
+const ui = { mode: 'auto', cursor: null, auto: { x: B.x + B.w / 2, y: B.y + B.h / 2 }, autoTarget: null };
+const seen = { pulse: false, anti: false, combo: false };
+// panel order: unlocked upgrades in the order they were unlocked, then only the next locked one
+const order = UPGRADES.filter(u => st.unlocked[u.id]).map(u => u.id);
+function visibleRows() {
+  const rows = order.map(id => ({ u: UPGRADES.find(x => x.id === id), locked: false }));
+  const locked = UPGRADES.filter(u => !st.unlocked[u.id]);
+  // next = lowest "earn N" threshold; condition-based unlocks (Rarity) are only teased once those run out
+  const next = locked.filter(u => u.unlock.earned).sort((a, b) => a.unlock.earned - b.unlock.earned)[0] || locked[0];
+  if (next) rows.push({ u: next, locked: true });
+  return rows;
+}
+
+function magnetPos() {
+  if (ui.mode === 'auto') return ui.auto;
+  return ui.cursor && inRect(ui.cursor, B) ? ui.cursor : null;
+}
+function banner(text, sub, color = C.magenta, life = 2.4) { fx.banners.push({ text, sub, color, life, total: life }); }
+function burst(x, y, n, spd, tier, life = .5) {
+  for (let k = 0; k < n; k++) {
+    const a = Math.random() * 6.3, sp = 30 + Math.random() * spd;
+    fx.parts.push({ x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, life, max: life, tier, ph: Math.random() * 6 });
+  }
+}
+const callbacks = {
+  onPickup(c, v) {
+    fx.earned.push({ t: st.t, v });
+    burst(c.x, c.y, c.tier === 'prism' ? 28 : c.tier === 'gold' ? 18 : 10, c.tier === 'basic' ? 90 : 150, c.tier);
+    if (c.tier !== 'basic') fx.shocks.push({ x: c.x, y: c.y, life: .45, max: .45, r: 50, tier: c.tier });
+    fx.floats.push({ x: c.x, y: c.y - 8, life: c.tier === 'basic' ? .9 : 1.3, text: '+' + fmt(v), tier: c.tier });
+  },
+  onAnti(c) {
+    burst(c.x, c.y, 24, 160, 'anti', .6);
+    fx.shocks.push({ x: c.x, y: c.y, life: .4, max: .4, r: 40, tier: 'anti' });
+    fx.floats.push({ x: c.x, y: c.y - 10, life: 1.2, text: 'SHORT CIRCUIT', tier: 'anti' });
+    fx.shake = .3;
+  },
+  onMiss(c) { burst(clamp(c.x, B.x, B.x + B.w), clamp(c.y, B.y, B.y + B.h), 4, 50, 'anti', .3); },
+  onEvent(type, x, y) {
+    if (type === 'burst') banner('COIN BURST', 'Triple spawns for a few seconds!', C.amber);
+    else { banner('FOUNTAIN', 'Grab them while you can!', C.cyan); fx.shocks.push({ x, y, life: .6, max: .6, r: 80, tier: 'basic' }); }
+  },
+  onUnlock(u) { order.push(u.id); banner(`NEW UPGRADE: ${u.name.toUpperCase()}`, u.desc, C.cyan, 6); fx.flash[u.id] = 1.2; },
+};
+function pulse() {
+  if (!Core.triggerPulse(st)) return;
+  const m = magnetPos(); if (m) fx.shocks.push({ x: m.x, y: m.y, life: .5, max: .5, r: Core.stats(st).range, tier: 'pulse' });
+}
+function tick(dt) {
+  if (ui.mode === 'auto') { // demo autopilot: slow random wander, ignores coins
+    const a = ui.auto;
+    if (!ui.autoTarget || Math.hypot(ui.autoTarget.x - a.x, ui.autoTarget.y - a.y) < 4)
+      ui.autoTarget = { x: B.x + 40 + Math.random() * (B.w - 80), y: B.y + 40 + Math.random() * (B.h - 80) };
+    const T = ui.autoTarget, d = Math.hypot(T.x - a.x, T.y - a.y), v = Math.min(d, 60 * dt);
+    if (d > 0) { a.x += (T.x - a.x) / d * v; a.y += (T.y - a.y) / d * v; }
+  }
+  Core.step(st, dt, magnetPos(), callbacks);
+  if (!seen.anti && st.totalEarned >= ANTI.unlockAt) { seen.anti = true; banner('ANTI-COINS INCOMING', 'Red coins short-circuit your magnet. Avoid them!', C.red, 3.2); }
+  if (!seen.combo && Core.comboUnlocked(st)) { seen.combo = true; banner('COMBO UNLOCKED', 'Chain pickups within 1.5 s: +10% each, up to ×2', C.amber, 3.2); }
+  if (!seen.pulse && Core.pulseUnlocked(st)) { seen.pulse = true; banner('PULSE UNLOCKED', 'SPACE or right click: huge range for 1 s', C.magenta, 3.2); }
+  for (const p of fx.parts) { p.x += p.vx * dt; p.y += p.vy * dt; p.life -= dt; }
+  fx.parts = fx.parts.filter(p => p.life > 0);
+  for (const s of fx.shocks) s.life -= dt;
+  fx.shocks = fx.shocks.filter(s => s.life > 0);
+  for (const f of fx.floats) { f.y -= 34 * dt; f.life -= dt; }
+  fx.floats = fx.floats.filter(f => f.life > 0);
+  // only one banner at a time: the first in the queue counts down
+  if (fx.banners.length && (fx.banners[0].life -= dt) <= 0) fx.banners.shift();
+  fx.earned = fx.earned.filter(e => st.t - e.t < 10);
+  for (const k in fx.flash) fx.flash[k] -= dt;
+  if (fx.shake > 0) fx.shake -= dt;
+}
+const incomePerSec = () => fx.earned.reduce((a, e) => a + e.v, 0) / Math.min(10, Math.max(1, st.t));
+
+/* ---------------- shop layout ---------------- */
+const rowRect = i => ({ x: P.x + 10, y: P.y + 96 + i * 58, w: P.w - 20, h: 54 }); // 7 rows fit exactly
+function buttonRect(i) { const r = rowRect(i), bw = 62, bh = 26; return { x: r.x + r.w - 10 - bw, y: r.y + (r.h - bh) / 2, w: bw, h: bh }; }
+
+/* ---------------- rendering ---------------- */
+function drawBoard(ctx) {
+  const t = st.t, S = Core.stats(st), isBurst = st.event && st.event.type === 'burst';
+  ctx.save();
+  if (fx.shake > 0) ctx.translate((Math.random() - .5) * 8 * fx.shake / .3, (Math.random() - .5) * 8 * fx.shake / .3);
+  ctx.save(); ctx.beginPath(); ctx.roundRect(B.x, B.y, B.w, B.h, 10); ctx.clip();
+  ctx.fillStyle = '#070a1a'; ctx.fillRect(B.x, B.y, B.w, B.h);
+  ctx.strokeStyle = isBurst ? `rgba(255,194,26,${.09 + .05 * Math.sin(t * 8)})` : 'rgba(0,240,255,.07)'; ctx.lineWidth = 1; ctx.beginPath();
+  for (let x = B.x; x < B.x + B.w; x += 28) { ctx.moveTo(x + .5, B.y); ctx.lineTo(x + .5, B.y + B.h); }
+  for (let y = B.y; y < B.y + B.h; y += 28) { ctx.moveTo(B.x, y + .5); ctx.lineTo(B.x + B.w, y + .5); }
+  ctx.stroke();
+
+  for (const c of st.coins) {
+    if (c.tier !== 'basic') { // trail (render-only history)
+      c.trail = c.trail || []; c.trail.push({ x: c.x, y: c.y }); if (c.trail.length > 14) c.trail.shift();
+      for (let k = 1; k < c.trail.length; k++) {
+        const p0 = c.trail[k - 1], p1 = c.trail[k], a = k / c.trail.length;
+        ctx.strokeStyle = tierColor(c.tier, t - (c.trail.length - k) * .03, c.ph); ctx.globalAlpha = a * (c.anti ? .3 : .5);
+        ctx.lineWidth = COIN_R * 1.1 * a; ctx.lineCap = 'round';
+        ctx.beginPath(); ctx.moveTo(p0.x, p0.y); ctx.lineTo(p1.x, p1.y); ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
+    }
+    if (c.age < SPAWN_T) { // spawn animation: subtle expanding ring + pop-in
+      const k = c.age / SPAWN_T, col = tierColor(c.tier, t, c.ph);
+      ctx.globalAlpha = .7 * (1 - k); ctx.strokeStyle = col; ctx.lineWidth = 1.5; glow(ctx, col, 6);
+      ctx.beginPath(); ctx.arc(c.x, c.y, COIN_R * (1 + k * 2.4), 0, 7); ctx.stroke(); noGlow(ctx);
+      ctx.globalAlpha = .7 + .3 * k;
+      drawCoin(ctx, c, Math.max(0, easeOutBack(k))); ctx.globalAlpha = 1;
+    } else {
+      const edge = Math.min(c.x - B.x, B.x + B.w - c.x, c.y - B.y, B.y + B.h - c.y);
+      ctx.globalAlpha = edge < 40 && !c.anti ? .45 + .55 * Math.abs(Math.sin(t * 9)) : 1;
+      drawCoin(ctx, c, 1); ctx.globalAlpha = 1;
+    }
+  }
+  for (const w of st.warns) drawWarning(ctx, w, t);
+  for (const s of fx.shocks) {
+    const k = 1 - s.life / s.max, col = s.tier === 'pulse' ? C.magenta : tierColor(s.tier, t);
+    ctx.globalAlpha = 1 - k; ctx.strokeStyle = col; ctx.lineWidth = s.tier === 'pulse' ? 3 : 2; glow(ctx, col, 12);
+    ctx.beginPath(); ctx.arc(s.x, s.y, 8 + k * s.r, 0, 7); ctx.stroke(); noGlow(ctx);
+  }
+  for (const p of fx.parts) {
+    ctx.globalAlpha = p.life / p.max; ctx.fillStyle = tierColor(p.tier, t, p.ph); const sz = p.tier === 'basic' ? 3 : 4;
+    ctx.fillRect(p.x - sz / 2, p.y - sz / 2, sz, sz);
+  }
+  ctx.globalAlpha = 1;
+
+  const m = magnetPos(); if (m) drawMagnet(ctx, m.x, m.y, S.range);
+
+  ctx.textAlign = 'center';
+  for (const f of fx.floats) {
+    const rare = f.tier !== 'basic', col = rare ? tierColor(f.tier, t) : '#ff6be3';
+    ctx.font = `700 ${f.tier === 'anti' ? 12 : rare ? 16 : 13}px ${FONT}`;
+    ctx.globalAlpha = Math.min(1, f.life / .4); glow(ctx, rare ? col : C.magenta, rare ? 12 : 8); ctx.fillStyle = col;
+    ctx.fillText(f.text, f.x, f.y); noGlow(ctx);
+  }
+  ctx.globalAlpha = 1; ctx.textAlign = 'left';
+
+  drawHud(ctx);
+  drawBanner(ctx);
+  ctx.restore();
+
+  glow(ctx, C.red, 10); ctx.strokeStyle = `rgba(255,51,85,${.35 + .2 * Math.sin(t * 4)})`; ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.roundRect(B.x + 1.5, B.y + 1.5, B.w - 3, B.h - 3, 9); ctx.stroke();
+  const frame = isBurst ? C.amber : C.cyan;
+  glow(ctx, frame, isBurst ? 18 : 12); ctx.strokeStyle = frame; ctx.lineWidth = isBurst ? 1.5 : 1;
+  ctx.beginPath(); ctx.roundRect(B.x + .5, B.y + .5, B.w - 1, B.h - 1, 10); ctx.stroke(); noGlow(ctx);
+  ctx.restore();
+}
+/* Anti-coin warning: two red rings closing in on the spot, a crosshair, a growing red glow and a blinking "!" */
+function drawWarning(ctx, w, t) {
+  const k = clamp(1 - w.t / ANTI.warn, 0, 1), blink = Math.sin(t * (14 + k * 26)) > 0;
+  ctx.save();
+  const g = ctx.createRadialGradient(w.x, w.y, 0, w.x, w.y, 46);
+  g.addColorStop(0, `rgba(255,51,85,${.12 + .28 * k})`); g.addColorStop(1, 'rgba(255,51,85,0)');
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(w.x, w.y, 46, 0, 7); ctx.fill();
+  glow(ctx, C.red, 14); ctx.strokeStyle = C.red;
+  for (const off of [0, .35]) {
+    const kk = (k + off) % 1, r = COIN_R + (1 - kk) * 52;
+    ctx.globalAlpha = .25 + .75 * kk; ctx.lineWidth = 1.5 + kk * 1.5;
+    ctx.beginPath(); ctx.arc(w.x, w.y, r, 0, 7); ctx.stroke();
+  }
+  ctx.globalAlpha = .5 + .5 * k; ctx.lineWidth = 1.5;
+  const a = 16, b = 26; ctx.beginPath();
+  ctx.moveTo(w.x - b, w.y); ctx.lineTo(w.x - a, w.y); ctx.moveTo(w.x + a, w.y); ctx.lineTo(w.x + b, w.y);
+  ctx.moveTo(w.x, w.y - b); ctx.lineTo(w.x, w.y - a); ctx.moveTo(w.x, w.y + a); ctx.lineTo(w.x, w.y + b); ctx.stroke();
+  if (blink) { ctx.globalAlpha = 1; ctx.fillStyle = C.red; ctx.font = `700 15px ${FONT}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('!', w.x, w.y + 1); }
+  ctx.restore();
+}
+function drawCoin(ctx, c, scale) {
+  if (scale <= 0) return;
+  const t = st.t;
+  if (c.anti) { // spiky red star with a dark core; fades + shrinks during its last ANTI.fade seconds
+    const f = clamp((ANTI.life - c.age) / ANTI.fade, 0, 1);
+    ctx.globalAlpha *= f; scale *= .6 + .4 * f;
+    const r = COIN_R * 1.1 * scale, col = C.red;
+    glow(ctx, col, 14); ctx.fillStyle = 'rgba(255,51,85,.18)'; ctx.strokeStyle = col; ctx.lineWidth = 1.8;
+    star(ctx, c.x, c.y, r * (1 + .1 * Math.sin(t * 12 + c.ph)), r * .5, 7, t * 1.5 + c.ph); ctx.fill(); ctx.stroke();
+    ctx.lineWidth = 2; ctx.beginPath();
+    ctx.moveTo(c.x - 3 * scale, c.y - 3 * scale); ctx.lineTo(c.x + 3 * scale, c.y + 3 * scale);
+    ctx.moveTo(c.x + 3 * scale, c.y - 3 * scale); ctx.lineTo(c.x - 3 * scale, c.y + 3 * scale); ctx.stroke();
+    noGlow(ctx); return;
+  }
+  if (c.tier === 'basic') {
+    glow(ctx, C.cyan, 12); ctx.strokeStyle = C.cyan; ctx.lineWidth = 1.6; ctx.fillStyle = 'rgba(0,240,255,.12)';
+    hex(ctx, c.x, c.y, COIN_R * scale, t * .8 + c.ph); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#bff9ff'; ctx.beginPath(); ctx.arc(c.x, c.y, 2.2 * scale, 0, 7); ctx.fill(); noGlow(ctx);
+    return;
+  }
+  const col = tierColor(c.tier, t, c.ph), prism = c.tier === 'prism';
+  const r = COIN_R * (prism ? 1.35 : 1.15) * scale, pulse = 1 + .08 * Math.sin(t * 10 + c.ph);
+  glow(ctx, col, prism ? 22 : 16); ctx.strokeStyle = col; ctx.lineWidth = 2;
+  ctx.fillStyle = prism ? 'rgba(255,255,255,.10)' : 'rgba(255,194,26,.16)';
+  hex(ctx, c.x, c.y, r * pulse, t * 2 + c.ph); ctx.fill(); ctx.stroke();
+  ctx.lineWidth = 1.2; hex(ctx, c.x, c.y, r * .55, -t * 3 + c.ph); ctx.stroke();
+  ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(c.x, c.y, 2.2 * scale, 0, 7); ctx.fill();
+  if (prism) {
+    for (let k = 0; k < 3; k++) {
+      const a = t * 4 + k * 2.094 + c.ph;
+      ctx.fillStyle = tierColor('prism', t + k * .3, c.ph);
+      ctx.beginPath(); ctx.arc(c.x + Math.cos(a) * r * 1.5, c.y + Math.sin(a) * r * 1.5, 1.8 * scale, 0, 7); ctx.fill();
+    }
+  }
+  noGlow(ctx);
+}
+function drawMagnet(ctx, x, y, R) {
+  const t = st.t;
+  if (st.stunT > 0) { // short-circuited: flickering red core, no field
+    const on = Math.sin(t * 40) > 0;
+    ctx.strokeStyle = on ? C.red : 'rgba(255,51,85,.3)'; ctx.lineWidth = 2.5; glow(ctx, C.red, on ? 12 : 0);
+    ctx.beginPath(); ctx.arc(x, y, MAG_R, 0, 7); ctx.stroke(); noGlow(ctx);
+    ctx.fillStyle = C.red; ctx.font = `700 10px ${FONT}`; ctx.textAlign = 'center';
+    ctx.fillText(`OFFLINE ${st.stunT.toFixed(1)}s`, x, y + MAG_R + 14); ctx.textAlign = 'left';
+    return;
+  }
+  const pulsing = st.pulseT > 0;
+  ctx.strokeStyle = `rgba(255,43,214,${pulsing ? .6 : .35})`; ctx.lineWidth = 1;
+  for (let i = 0; i < 3; i++) { const r = (t * (pulsing ? 120 : 30) + i * R / 3) % R; ctx.globalAlpha = 1 - r / R; ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.stroke(); }
+  ctx.globalAlpha = 1;
+  if (pulsing) { ctx.fillStyle = 'rgba(255,43,214,.06)'; ctx.beginPath(); ctx.arc(x, y, R, 0, 7); ctx.fill(); }
+  glow(ctx, C.magenta, pulsing ? 18 : 10); ctx.setLineDash([6, 6]); ctx.lineDashOffset = -t * 20; ctx.strokeStyle = `rgba(255,43,214,${pulsing ? .9 : .6})`;
+  ctx.beginPath(); ctx.arc(x, y, R, 0, 7); ctx.stroke(); ctx.setLineDash([]);
+  ctx.lineWidth = 2.5; ctx.strokeStyle = C.magenta; ctx.beginPath(); ctx.arc(x, y, MAG_R, 0, 7); ctx.stroke();
+  ctx.fillStyle = '#ffd0f5'; ctx.beginPath(); ctx.arc(x, y, 3, 0, 7); ctx.fill(); noGlow(ctx);
+
+  if (st.combo >= 2) { // combo badge + timer arc
+    const mult = Core.comboMult(st.combo), k = Math.max(0, st.comboT / COMBO.window), hot = mult >= COMBO.max;
+    const col = hot ? C.amber : C.magenta;
+    ctx.strokeStyle = col; ctx.lineWidth = 2; glow(ctx, col, 8);
+    ctx.beginPath(); ctx.arc(x, y, MAG_R + 5, -Math.PI / 2, -Math.PI / 2 + k * Math.PI * 2); ctx.stroke();
+    ctx.fillStyle = col; ctx.font = `700 ${hot ? 14 : 13}px ${FONT}`;
+    ctx.fillText(`×${mult.toFixed(1)}`, x + 18, y - 14); noGlow(ctx);
+    ctx.fillStyle = C.sub; ctx.font = `10px ${FONT}`; ctx.fillText(`COMBO ${st.combo}`, x + 18, y - 2);
+  }
+}
+function drawHud(ctx) {
+  const s = st.stats;
+  ctx.fillStyle = 'rgba(95,155,179,.7)'; ctx.font = `11px ${FONT}`; ctx.textBaseline = 'top';
+  ctx.fillText(`RUN ${mmss(st.t)}   CATCH ${(Core.catchRate(st) * 100).toFixed(0)}%   MISSED ${s.missed}   BEST COMBO ${s.bestCombo}`, B.x + 12, B.y + 10);
+  ctx.textBaseline = 'alphabetic';
+
+  // pulse widget, bottom-left of the board
+  const x = B.x + 12, y = B.y + B.h - 34, w = 150, h = 22;
+  ctx.fillStyle = 'rgba(8,12,30,.85)'; ctx.beginPath(); ctx.roundRect(x, y, w, h, 6); ctx.fill();
+  ctx.textBaseline = 'middle'; ctx.font = `700 10px ${FONT}`;
+  if (!Core.pulseUnlocked(st)) {
+    ctx.strokeStyle = 'rgba(95,155,179,.3)'; ctx.lineWidth = 1; ctx.stroke();
+    ctx.fillStyle = C.sub; ctx.fillText(`PULSE · earn ${fmt(PULSE.unlockAt)}`, x + 10, y + h / 2);
+  } else {
+    const ready = st.pulseCd <= 0, active = st.pulseT > 0;
+    if (!ready) { // cooldown fill
+      ctx.fillStyle = 'rgba(255,43,214,.18)'; ctx.beginPath(); ctx.roundRect(x, y, w * (1 - st.pulseCd / PULSE.cooldown), h, 6); ctx.fill();
+    }
+    ctx.strokeStyle = ready ? C.magenta : 'rgba(255,43,214,.4)'; ctx.lineWidth = 1; if (ready) glow(ctx, C.magenta, 8);
+    ctx.beginPath(); ctx.roundRect(x, y, w, h, 6); ctx.stroke(); noGlow(ctx);
+    ctx.fillStyle = ready || active ? C.magenta : C.sub;
+    ctx.fillText(active ? 'PULSE ACTIVE' : ready ? 'PULSE  [SPACE]' : `PULSE  ${Math.ceil(st.pulseCd)}s`, x + 10, y + h / 2);
+  }
+  ctx.textBaseline = 'alphabetic';
+}
+function drawBanner(ctx) {
+  const b = fx.banners[0]; if (!b) return;
+  const age = b.total - b.life, a = Math.min(1, age / .25, b.life / .4), y = B.y + 58 - (1 - Math.min(1, age / .25)) * 10;
+  ctx.save(); ctx.globalAlpha = a; ctx.textAlign = 'center';
+  glow(ctx, b.color, 16); ctx.fillStyle = b.color; ctx.font = `700 22px ${FONT}`;
+  ctx.fillText(b.text, B.x + B.w / 2, y); noGlow(ctx);
+  if (b.sub) { ctx.fillStyle = C.text; ctx.font = `12px ${FONT}`; ctx.fillText(b.sub, B.x + B.w / 2, y + 22); }
+  ctx.restore();
+}
+function drawPrestigeBar(ctx) {
+  const prog = Math.min(1, st.totalEarned / GOAL), ready = prog >= 1;
+  ctx.save();
+  ctx.fillStyle = '#080c1e'; ctx.beginPath(); ctx.roundRect(PB.x, PB.y, PB.w, PB.h, 10); ctx.fill();
+  ctx.strokeStyle = ready ? C.magenta : 'rgba(0,229,255,.35)'; ctx.lineWidth = 1; if (!ready) ctx.setLineDash([5, 5]); ctx.stroke(); ctx.setLineDash([]);
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = C.magenta; ctx.font = `700 11px ${FONT}`; ctx.fillText('POLARITY SHIFT', PB.x + 16, PB.y + 19);
+  ctx.fillStyle = C.sub; ctx.font = `11px ${FONT}`;
+  ctx.fillText(ready ? 'READY (coming in M5)' : `Earn 1M this run · ${fmtShort(st.totalEarned)}`, PB.x + 16, PB.y + 36);
+  const bx = PB.x + 250, bw = PB.w - 250 - 130, by = PB.y + PB.h / 2 - 4;
+  ctx.fillStyle = 'rgba(0,229,255,.08)'; ctx.beginPath(); ctx.roundRect(bx, by, bw, 8, 4); ctx.fill();
+  if (prog > 0) { glow(ctx, C.magenta, 8); ctx.fillStyle = C.magenta; ctx.beginPath(); ctx.roundRect(bx, by, Math.max(8, bw * prog), 8, 4); ctx.fill(); noGlow(ctx); }
+  ctx.fillStyle = C.text; ctx.font = `700 12px ${FONT}`; ctx.textAlign = 'right'; ctx.fillText('CORES: 0', PB.x + PB.w - 16, PB.y + PB.h / 2);
+  ctx.restore();
+}
+function drawPanel(ctx) {
+  ctx.save();
+  glow(ctx, '#00e5ff', 12); ctx.fillStyle = '#080c1e';
+  ctx.beginPath(); ctx.roundRect(P.x, P.y, P.w, P.h, 10); ctx.fill();
+  ctx.strokeStyle = '#00e5ff'; ctx.lineWidth = 1; ctx.stroke(); noGlow(ctx);
+  ctx.textBaseline = 'middle';
+  glow(ctx, C.cyan, 8); ctx.fillStyle = C.cyan; hex(ctx, P.x + 26, P.y + 33, 8, st.t * .8); ctx.fill(); noGlow(ctx);
+  ctx.fillStyle = C.text; ctx.font = `600 22px ${FONT}`; ctx.fillText(fmt(st.money), P.x + 42, P.y + 33);
+  ctx.fillStyle = C.sub; ctx.font = `12px ${FONT}`; ctx.fillText(`+${incomePerSec().toFixed(1)} / s`, P.x + 42, P.y + 54);
+  ctx.fillStyle = C.magenta; ctx.font = `700 11px ${FONT}`; ctx.fillText('UPGRADES', P.x + 16, P.y + 82);
+  visibleRows().forEach(({ u, locked }, i) => {
+    const r = rowRect(i), b = buttonRect(i), lv = st.levels[u.id], fl = fx.flash[u.id] || 0;
+    ctx.fillStyle = fl > 0 ? `rgba(0,240,255,${.25 * Math.min(1, fl / .3)})` : 'rgba(0,229,255,.05)';
+    ctx.beginPath(); ctx.roundRect(r.x, r.y, r.w, r.h, 7); ctx.fill();
+    if (locked) { // teaser row for the next unlock
+      ctx.setLineDash([4, 4]); ctx.strokeStyle = 'rgba(95,155,179,.25)'; ctx.lineWidth = 1; ctx.stroke(); ctx.setLineDash([]);
+      ctx.fillStyle = 'rgba(230,251,255,.35)'; ctx.font = `600 13px ${FONT}`; ctx.fillText(u.name.toUpperCase(), r.x + 10, r.y + 15);
+      ctx.fillStyle = C.sub; ctx.font = `10px ${FONT}`; ctx.fillText(Core.unlockHint(u), r.x + 10, r.y + 36);
+      ctx.fillStyle = 'rgba(95,155,179,.6)'; ctx.font = `700 10px ${FONT}`; ctx.textAlign = 'center'; ctx.fillText('LOCKED', b.x + b.w / 2, r.y + 15); ctx.textAlign = 'left';
+      return;
+    }
+    const maxed = Core.isMaxed(st, u), cost = Core.costOf(u, lv), ok = Core.canBuy(st, u);
+    const hover = ui.mode === 'player' && ui.cursor && inRect(ui.cursor, b);
+    ctx.fillStyle = C.text; ctx.font = `600 13px ${FONT}`; ctx.fillText(u.name.toUpperCase(), r.x + 10, r.y + 15);
+    ctx.fillStyle = C.sub; ctx.font = `10px ${FONT}`; ctx.fillText(`Lv ${lv}/${u.max}  [${i + 1}]`, r.x + 10, r.y + 30);
+    ctx.fillStyle = C.text; ctx.fillText(maxed ? u.fmt(u.fx(lv)) : `${u.fmt(u.fx(lv))} → ${u.fmt(u.fx(lv + 1))}`, r.x + 10, r.y + 43);
+    if (maxed) {
+      ctx.fillStyle = C.magenta; ctx.font = `700 12px ${FONT}`; ctx.textAlign = 'center'; ctx.fillText('MAX', b.x + b.w / 2, b.y + b.h / 2 + 1); ctx.textAlign = 'left';
+      return;
+    }
+    ctx.globalAlpha = ok ? 1 : .35;
+    if (ok) glow(ctx, C.cyan, hover ? 14 : 6);
+    if (ok && hover) { ctx.fillStyle = 'rgba(0,240,255,.15)'; ctx.beginPath(); ctx.roundRect(b.x, b.y, b.w, b.h, 6); ctx.fill(); }
+    ctx.strokeStyle = C.cyan; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.roundRect(b.x, b.y, b.w, b.h, 6); ctx.stroke(); noGlow(ctx);
+    ctx.fillStyle = C.cyan; ctx.font = `700 12px ${FONT}`; ctx.textAlign = 'center'; ctx.fillText(fmtShort(cost), b.x + b.w / 2, b.y + b.h / 2 + 1); ctx.textAlign = 'left';
+    ctx.globalAlpha = 1;
+  });
+  ctx.restore();
+}
+function wrap(ctx, text, maxW) {
+  const words = text.split(' '), lines = []; let line = '';
+  for (const w of words) { const tst = line ? line + ' ' + w : w; if (ctx.measureText(tst).width > maxW && line) { lines.push(line); line = w; } else line = tst; }
+  if (line) lines.push(line); return lines;
+}
+function drawTooltip(ctx) {
+  if (ui.mode !== 'player' || !ui.cursor) return;
+  const rows = visibleRows(), i = rows.findIndex((_, k) => inRect(ui.cursor, rowRect(k)));
+  if (i < 0) return;
+  const { u, locked } = rows[i], r = rowRect(i), w = 230;
+  const text = locked ? `${Core.unlockHint(u)}.` : u.desc;
+  ctx.save(); ctx.font = `11px ${FONT}`;
+  const lines = wrap(ctx, text, w - 24), h = 30 + lines.length * 15;
+  const x = P.x - w - 8, y = Math.min(r.y, H - h - 10);
+  glow(ctx, C.cyan, 10); ctx.fillStyle = 'rgba(8,12,30,.96)'; ctx.beginPath(); ctx.roundRect(x, y, w, h, 8); ctx.fill();
+  ctx.strokeStyle = C.cyan; ctx.lineWidth = 1; ctx.stroke(); noGlow(ctx);
+  ctx.textBaseline = 'top';
+  ctx.fillStyle = C.magenta; ctx.font = `700 11px ${FONT}`; ctx.fillText(u.name.toUpperCase() + (locked ? ' · LOCKED' : ''), x + 12, y + 10);
+  ctx.fillStyle = C.text; ctx.font = `11px ${FONT}`; lines.forEach((l, k) => ctx.fillText(l, x + 12, y + 26 + k * 15));
+  ctx.restore();
+}
+
+/* ---------------- input & loop ---------------- */
+const cv = document.getElementById('c'), dpr = Math.max(2, window.devicePixelRatio || 1);
+cv.width = W * dpr; cv.height = H * dpr;
+const ctx = cv.getContext('2d'); ctx.scale(dpr, dpr);
+function toCanvas(e) { const r = cv.getBoundingClientRect(); return { x: (e.clientX - r.left) * W / r.width, y: (e.clientY - r.top) * H / r.height }; }
+cv.addEventListener('mousemove', e => {
+  ui.mode = 'player'; ui.cursor = toCanvas(e);
+  const overBtn = visibleRows().some(({ u }, i) => inRect(ui.cursor, buttonRect(i)) && Core.canBuy(st, u));
+  cv.style.cursor = inRect(ui.cursor, B) ? 'none' : overBtn ? 'pointer' : 'default';
+});
+cv.addEventListener('mouseleave', () => { ui.mode = 'auto'; ui.cursor = null; });
+cv.addEventListener('click', e => {
+  const p = toCanvas(e);
+  visibleRows().forEach(({ u }, i) => { if (inRect(p, buttonRect(i)) && Core.buy(st, u)) fx.flash[u.id] = .3; });
+});
+cv.addEventListener('contextmenu', e => { e.preventDefault(); pulse(); });
+window.addEventListener('keydown', e => {
+  if (e.code === 'Space') { e.preventDefault(); pulse(); return; }
+  // 1–7 buy the upgrade in that panel row (unlocked rows only)
+  const m = /^(?:Digit|Numpad)([1-7])$/.exec(e.code);
+  if (m) {
+    const row = visibleRows()[Number(m[1]) - 1];
+    if (row && !row.locked && Core.buy(st, row.u)) fx.flash[row.u.id] = .3;
+  }
+});
+
+const warm = Number(params.get('warm')) || 0;
+for (let k = 0; k < warm * 60; k++) tick(1 / 60);
+
+let last = performance.now(), acc = 0;
+function frame(now) {
+  acc += Math.min(.25, (now - last) / 1000); last = now;
+  while (acc >= 1 / 60) { tick(1 / 60); acc -= 1 / 60; }
+  ctx.fillStyle = '#04050c'; ctx.fillRect(0, 0, W, H);
+  drawBoard(ctx); drawPrestigeBar(ctx); drawPanel(ctx); drawTooltip(ctx);
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
