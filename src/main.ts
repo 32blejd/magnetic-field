@@ -11,9 +11,10 @@ import { Effects } from './render/effects';
 import { drawPanel, drawTooltip } from './render/panel';
 import { drawPrestigeBar } from './render/prestigeBar';
 import { COLORS } from './render/theme';
-import { AUTOSAVE_INTERVAL, clearSave, loadGame, saveGame } from './save/save';
+import { AUTOSAVE_INTERVAL, clearSave, loadGame, saveGame, type LoadResult } from './save/save';
 import { setupInput } from './ui/input';
 import { buttonRect, inRect, visibleRows } from './ui/layout';
+import { S } from './ui/strings';
 
 const canvas = document.getElementById('game') as HTMLCanvasElement;
 const ctx = canvas.getContext('2d')!;
@@ -25,9 +26,12 @@ ctx.scale(dpr, dpr);
 // ---- state ----
 const debug = readDebugOptions(location.search);
 if (debug.reset) clearSave(localStorage);
-const st = (!debug.noSave && loadGame(localStorage)) || createState((Date.now() ^ (Math.random() * 1e9)) >>> 0);
+const loaded: LoadResult = debug.noSave ? { state: null, movedToBackup: false } : loadGame(localStorage);
+// A new run gets a random seed; from then on all game randomness comes from the state's RNG.
+const st = loaded.state ?? createState((Date.now() ^ (Math.random() * 1e9)) >>> 0);
 if (debug.earned) st.money = st.totalEarned = debug.earned;
 const fx = new Effects();
+if (loaded.movedToBackup) fx.banner(S.saveUnreadable.title, S.saveUnreadable.sub, COLORS.red, 6);
 const events: GameEvent[] = [];
 let cursor: Vec | null = null;
 

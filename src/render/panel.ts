@@ -38,7 +38,7 @@ export function drawPanel(ctx: Ctx, st: GameState, fx: Effects, cursor: Vec | nu
 
     const maxed = isMaxed(st, def), ok = canBuy(st, def), hover = cursor !== null && inRect(cursor, b);
     ctx.fillStyle = COLORS.text; ctx.font = `600 13px ${FONT}`; ctx.fillText(text.name.toUpperCase(), r.x + 10, r.y + 15);
-    ctx.fillStyle = COLORS.sub; ctx.font = `10px ${FONT}`; ctx.fillText(S.level(lv, def.max, i + 1), r.x + 10, r.y + 30);
+    ctx.fillStyle = COLORS.sub; ctx.font = `10px ${FONT}`; ctx.fillText(S.level(formatNumber(lv), formatNumber(def.max), i + 1), r.x + 10, r.y + 30);
     const now = formatUpgradeValue(def.id, def.fx(lv));
     ctx.fillStyle = COLORS.text;
     ctx.fillText(maxed ? now : `${now} → ${formatUpgradeValue(def.id, def.fx(lv + 1))}`, r.x + 10, r.y + 43);

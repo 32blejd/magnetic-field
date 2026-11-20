@@ -17,7 +17,7 @@ The target feeling: every upgrade is **visible on screen** (bigger field, more c
 
 ### Movement (placeholders, to be tuned)
 
-- **Coin size:** radius 11.88 px (mockup units) – enlarged twice (+20%, then +10%) so the game is less precise and easier to read.
+- **Coin size:** radius 11.88 px (logical units of the 960×540 view, ×2 on 1080p) – enlarged twice (+20%, then +10%) so the game is less precise and easier to read.
 - **Drift speed:** a basic coin covers half the board height in **1.95 s** (speed = board height / 2 / 1.95 s).
 - **Coin tiers** (rolled on spawn):
 
@@ -29,7 +29,7 @@ The target feeling: every upgrade is **visible on screen** (bigger field, more c
   | Anti | 0.5% (after 25,000 earned) | – | ×0.2 | pull ×0.60 (a bit heavier than Prism); **not affected by Pulse** | red spiky star with an ×; 1 s warning marker before it appears; vanishes after 5 s; see below |
 
   Pickup text shows just the amount (e.g. `+2`) in the tier's color; no multiplier tag.
-- **Pull speed:** coins inside the range move toward the magnet at `strength × tierPull × (45 + 130 × (1 − distance / range))` px/s (mockup scale, 960×540), i.e. faster the closer they are.
+- **Pull speed:** coins inside the range move toward the magnet at `strength × tierPull × (45 + 130 × (1 − distance / range))` px/s (logical units), i.e. faster the closer they are.
 - **Spawn animation:** 0.25 s pop-in (scale up with a slight overshoot + a subtle expanding ring at ~70% brightness). The coin drifts from the very first frame, but can't be pulled or collected until the animation ends – so camping the cursor on a spawn point doesn't work.
 - **Magnet activity:** the magnet exists only while the cursor is over the board. Moving the cursor to the upgrade panel or prestige bar turns it off (normal cursor there, so the player can click).
 - Spawn positions: random, away from the edges, so every coin has a fair chance to be caught.
@@ -109,7 +109,7 @@ Rarity level costs: 50 · 110 · 242 · 532 · 1,171 · 2,577 · 5,669 · **24,9
 
 At max Strength a basic coin is pulled at ~370 px/s at the edge of the field and ~1,400 px/s near the magnet, so at max Range it flies in within ~0.2 s.
 
-Cost of the next level = `round(base × growth^level)`. Pixel values are in mockup units (×2 on 1080p).
+Cost of the next level = `round(base × growth^level × steepExtra)`, where `steepExtra` is 1 except for Rarity's last levels (×2, ×4, ×8, see above). Pixel values are in logical units of the 960×540 view (×2 on 1080p).
 
 Sample costs:
 
@@ -171,7 +171,7 @@ Requirement: **earn 1M total in the current run.** Resets currency and upgrades 
 | **M5** | Prestige | there's a reason to start over | |
 | **M6** | Polish: sounds, more particles, save export UI, satellites | the game *feels* good | |
 
-**MVP = M0–M2.** Collecting coins has to be fun on its own before we add more systems. M0–M3 were built by porting the JS prototype in `docs/mockups/` to TypeScript (`src/`); the prototype is kept only for reference.
+**MVP = M0–M2.** Collecting coins has to be fun on its own before we add more systems. M0–M3 were built by porting a single-file JS prototype to TypeScript (`src/`). The prototype was then removed so the numbers live in one place; it's still in the git history (first commit, `docs/mockups/`).
 
 ## Debug URL params (testing)
 

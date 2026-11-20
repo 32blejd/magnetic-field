@@ -1,9 +1,10 @@
 import { ANTI, COMBO, PULSE } from '../data/tuning';
+import { hasEarned } from './money';
 import type { GameState } from './types';
 
-export const comboUnlocked = (st: GameState): boolean => st.totalEarned >= COMBO.unlockAt;
-export const pulseUnlocked = (st: GameState): boolean => st.totalEarned >= PULSE.unlockAt;
-export const antiUnlocked = (st: GameState): boolean => st.totalEarned >= ANTI.unlockAt;
+export const comboUnlocked = (st: GameState): boolean => hasEarned(st, COMBO.unlockAt);
+export const pulseUnlocked = (st: GameState): boolean => hasEarned(st, PULSE.unlockAt);
+export const antiUnlocked = (st: GameState): boolean => hasEarned(st, ANTI.unlockAt);
 
 /** Combo multiplier for a combo count: +step per chained pickup after the first, capped. */
 export function comboMult(combo: number): number {

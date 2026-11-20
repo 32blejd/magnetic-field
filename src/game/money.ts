@@ -1,4 +1,6 @@
-/* All currency operations live here, so a future switch to break_eternity.js touches one file. */
+/* All gameplay arithmetic and comparisons on currency live here (costs, buying, earning, coin value, thresholds).
+   Other code only stores, saves or formats the values, so a future switch to break_eternity.js mostly touches this file
+   (plus the save format, ui/format.ts and the income readout in render/effects.ts). */
 import type { UpgradeDef } from '../data/upgrades';
 import type { GameState } from './types';
 
@@ -26,3 +28,12 @@ export function earn(st: GameState, amount: number): void {
   st.money += amount;
   st.totalEarned += amount;
 }
+
+/** Value of one collected coin. */
+export const coinValue = (perCoin: number, tierMult: number, comboMultiplier: number): number => perCoin * tierMult * comboMultiplier;
+
+/** Whether at least `amount` has been earned this run (unlock thresholds). */
+export const hasEarned = (st: GameState, amount: number): boolean => st.totalEarned >= amount;
+
+/** Share of `goal` earned this run, 0–1. */
+export const earnedShare = (st: GameState, goal: number): number => Math.min(1, st.totalEarned / goal);

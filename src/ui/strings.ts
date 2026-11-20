@@ -1,7 +1,8 @@
-/* All player-facing text in one place. */
+/* All player-facing text in one place. Counts and amounts arrive already formatted (formatNumber/formatShort). */
 import type { GoalDef, GoalMetric } from '../data/goals';
 import type { UpgradeId } from '../data/upgrades';
 import type { FeatureId } from '../game/types';
+import { formatNumber } from './format';
 
 export const UPGRADE_TEXT: Record<UpgradeId, { name: string; desc: string }> = {
   value: { name: 'Value', desc: 'Coins added to your wallet per coin collected.' },
@@ -31,23 +32,23 @@ export const S = {
   burst: { title: 'COIN BURST', sub: 'Triple spawns for a few seconds!' },
   fountain: { title: 'FOUNTAIN', sub: 'Grab them while you can!' },
   goalComplete: 'GOAL COMPLETE',
-  goalText: (g: GoalDef) => `Catch ${g.target.toLocaleString('en-US')} ${GOAL_NOUN[g.metric][g.target === 1 ? 0 : 1]}`,
+  goalText: (g: GoalDef) => `Catch ${formatNumber(g.target)} ${GOAL_NOUN[g.metric][g.target === 1 ? 0 : 1]}`,
   goalLabel: { coins: 'COINS', gold: 'GOLD', prism: 'PRISM', anti: 'ANTI' } as Record<GoalMetric, string>,
   goalsTitle: 'GOALS',
   shortCircuit: 'SHORT CIRCUIT',
 
-  hudLine: (time: string, catchPct: number, missed: number, best: number) =>
+  hudLine: (time: string, catchPct: number, missed: string, best: string) =>
     `RUN ${time}   CATCH ${catchPct}%   MISSED ${missed}   BEST COMBO ${best}`,
   pulseLocked: (n: string) => `PULSE · earn ${n}`,
   pulseReady: 'PULSE  [SPACE]',
   pulseActive: 'PULSE ACTIVE',
   pulseCooldown: (s: number) => `PULSE  ${s}s`,
   offline: (s: string) => `OFFLINE ${s}s`,
-  combo: (n: number) => `COMBO ${n}`,
+  combo: (n: string) => `COMBO ${n}`,
 
   upgradesTitle: 'UPGRADES',
   perSecond: (v: string) => `+${v} / s`,
-  level: (lv: number, max: number, key: number) => `Lv ${lv}/${max}  [${key}]`,
+  level: (lv: string, max: string, key: number) => `Lv ${lv}/${max}  [${key}]`,
   locked: 'LOCKED',
   max: 'MAX',
   unlockHint: (n: string) => `Earn ${n} to unlock`,
@@ -55,5 +56,6 @@ export const S = {
   prestigeTitle: 'POLARITY SHIFT',
   prestigeProgress: (earned: string) => `Earn 1M this run · ${earned}`,
   prestigeReady: 'READY (coming in M5)',
-  cores: (n: number) => `CORES: ${n}`,
+  cores: (n: string) => `CORES: ${n}`,
+  saveUnreadable: { title: 'SAVE COULD NOT BE LOADED', sub: 'Starting a new run. The old save was kept as a backup copy.' },
 };

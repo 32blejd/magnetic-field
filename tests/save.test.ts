@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { createState } from '../src/game/state';
 import { migrate } from '../src/save/migrations';
-import { deserialize, exportSave, importSave, loadGame, saveGame, serialize, type StorageLike } from '../src/save/save';
+import {
+  BACKUP_KEY, SAVE_KEY, deserialize, exportSave, importSave, loadGame, saveGame, serialize, type StorageLike,
+} from '../src/save/save';
 
 function memoryStorage(): StorageLike & { data: Map<string, string> } {
   const data = new Map<string, string>();
@@ -48,8 +50,38 @@ describe('save', () => {
   it('works through storage and as exportable text', () => {
     const storage = memoryStorage();
     saveGame(playedState(), storage);
-    expect(loadGame(storage)?.money).toBe(1234);
+    const loaded = loadGame(storage);
+    expect(loaded.state?.money).toBe(1234);
+    expect(loaded.movedToBackup).toBe(false);
     expect(importSave(exportSave(playedState()))?.levels.value).toBe(3);
+  });
+
+  it('loads a save with missing optional fields using defaults', () => {
+    const loaded = deserialize(JSON.stringify({ version: 1, money: 50, totalEarned: 200, levels: { range: 2 } }))!;
+    expect(loaded.money).toBe(50);
+    expect(loaded.levels.range).toBe(2);
+    expect(loaded.unlockOrder).toEqual(['value', 'range', 'spawn']);
+    expect(loaded.stats.caught).toEqual({ basic: 0, gold: 0, prism: 0 });
+    expect(loaded.goalsDone).toEqual({});
+  });
+
+  it('rejects a save with fields of the wrong type', () => {
+    const data = JSON.parse(serialize(playedState()));
+    data.unlockOrder = 'strength';
+    expect(deserialize(JSON.stringify(data))).toBeNull();
+  });
+
+  it('keeps an unreadable save as a backup instead of letting autosave overwrite it', () => {
+    const storage = memoryStorage();
+    const broken = '{"version":1,"money":"lots"}';
+    storage.setItem(SAVE_KEY, broken);
+    const loaded = loadGame(storage);
+    expect(loaded.state).toBeNull();
+    expect(loaded.movedToBackup).toBe(true);
+    expect(storage.getItem(BACKUP_KEY)).toBe(broken);
+    // a save from a newer game version is kept too
+    storage.setItem(SAVE_KEY, JSON.stringify({ version: 2, money: 1 }));
+    expect(loadGame(storage).movedToBackup).toBe(true);
   });
 
   it('clamps levels and ignores unknown upgrades', () => {
@@ -67,6 +99,6 @@ describe('save', () => {
     expect(deserialize('{}')).toBeNull();
     expect(migrate({ version: 99, money: 1 })).toBeNull();
     expect(importSave('%%%')).toBeNull();
-    expect(loadGame(memoryStorage())).toBeNull();
+    expect(loadGame(memoryStorage())).toEqual({ state: null, movedToBackup: false });
   });
 });

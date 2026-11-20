@@ -9,7 +9,7 @@ Full game outline, numbers, balance and milestones: [docs/DESIGN.md](docs/DESIGN
 - TypeScript (strict) + Vite
 - Everything is drawn on one 2D `<canvas>` (board, HUD, panel) in a 960×540 logical view, scaled to the window
 - Tests: Vitest. Balance simulator: `tsx`
-- Numbers: plain `number` for now. All currency operations live in `src/game/money.ts`, so a possible switch to `break_eternity.js` touches one place only
+- Numbers: plain `number` for now. Gameplay arithmetic and comparisons on currency go through `src/game/money.ts` (`costOf`, `buy`, `earn`, `coinValue`, `hasEarned`, `earnedShare`); other code only stores, saves or formats the values. A switch to `break_eternity.js` would touch `money.ts`, the save format, `ui/format.ts` and the income readout in `render/effects.ts`
 
 ## Commands
 
@@ -38,8 +38,8 @@ src/
   debug.ts   # debug URL params
   main.ts    # wires everything together, game loop
 scripts/     # bot + balance simulator, Vitest launcher
-tests/       # Vitest tests (formulas, simulation, goals, save, balance)
-docs/        # DESIGN.md; docs/mockups/ = the old single-file JS prototype (reference only)
+tests/       # Vitest tests (formulas, simulation, goals, save, ui formatting/currency helpers, balance)
+docs/        # DESIGN.md – game design, numbers, balance tables
 ```
 
 ## Architecture rules
@@ -50,12 +50,13 @@ docs/        # DESIGN.md; docs/mockups/ = the old single-file JS prototype (refe
 - **Single source of truth.** `GameState` holds primary data; magnet parameters are derived by `getStats(state)` – never store them.
 - **Data-driven upgrades.** A new upgrade = an entry in `src/data/upgrades.ts` + its text in `ui/strings.ts` + its format in `ui/format.ts`. Effects are written in terms of `level / max` so caps can change without changing the value at max.
 - **Upgrade cost:** `round(base × growth^level × steepExtra)` in `game/money.ts`, covered by tests.
-- **Deterministic RNG.** All game randomness goes through `rand(state)` (state-held seed). `Math.random` is only allowed for visual effects.
+- **Deterministic RNG.** All game randomness goes through `rand(state)` (state-held seed). `Math.random` is only allowed for visual effects and for picking the seed of a new run (`main.ts`).
 - **Transient objects** (coins, warnings, timers, effects) are not saved.
 
 ## Saving
 
 - `localStorage`, key `magnetic-field-save`, JSON with a `version` field (`save/save.ts`).
+- Loading is tolerant: only currency and levels are required, missing fields fall back to defaults, wrong types reject the save. A save that can't be read (corrupted or from a newer version) is copied to `magnetic-field-save-unreadable` before the game starts fresh, so autosave never destroys it; the player sees a banner.
 - Every change to the saved shape = bump `CURRENT_VERSION` + a migration step in `save/migrations.ts` + a test. Never break old saves.
 - Autosave every 30 s and on `visibilitychange`/`beforeunload`. Export/import as base64 text exists in `save/save.ts` (no UI yet).
 
@@ -63,5 +64,5 @@ docs/        # DESIGN.md; docs/mockups/ = the old single-file JS prototype (refe
 
 - Everything in English: code, comments, docs and UI text. All player-facing strings live in `src/ui/strings.ts`.
 - Small pure functions in `game/`; side effects (DOM, localStorage, time) only in `main.ts`/`ui/input.ts`.
-- Numbers shown in the UI always go through `formatNumber`/`formatShort`, never raw `toString()`.
+- Counts and amounts shown to the player always go through `formatNumber`/`formatShort` before reaching a string in `ui/strings.ts`; seconds, percentages and multipliers use fixed precision (`toFixed`/`Math.round`).
 - After logic or tuning changes run `npm test` (includes a balance guard: average bot reaches 1M in 16–24 min) and, for tuning, `npm run sim` at 250/400/600 and update DESIGN.md. After UI changes check the game in `npm run dev`.

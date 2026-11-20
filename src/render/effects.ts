@@ -87,20 +87,28 @@ export class Effects {
     this.shocks.push({ x: at.x, y: at.y, life: 0.5, max: 0.5, radius, kind: 'pulse' });
   }
 
-  /** Recent trail positions of a coin (render-only history). */
-  trail(c: Coin): Vec[] {
-    let t = this.trails.get(c);
-    if (!t) { t = []; this.trails.set(c, t); }
-    t.push({ x: c.x, y: c.y });
-    if (t.length > TRAIL_LENGTH) t.shift();
-    return t;
+  /** Recent positions of a rare coin, oldest first (recorded in update(), so the length doesn't depend on frame rate). */
+  trailOf(c: Coin): readonly Vec[] {
+    return this.trails.get(c) ?? [];
+  }
+
+  private recordTrails(st: GameState): void {
+    for (const c of st.coins) {
+      if (c.tier === 'basic') continue;
+      let t = this.trails.get(c);
+      if (!t) { t = []; this.trails.set(c, t); }
+      t.push({ x: c.x, y: c.y });
+      if (t.length > TRAIL_LENGTH) t.shift();
+    }
   }
 
   incomePerSecond(st: GameState): number {
     return this.earned.reduce((a, e) => a + e.v, 0) / Math.min(10, Math.max(1, st.t));
   }
 
+  /** Advance visual effects; called once per simulation step (fixed dt). */
   update(dt: number, st: GameState): void {
+    this.recordTrails(st);
     for (const p of this.parts) { p.x += p.vx * dt; p.y += p.vy * dt; p.life -= dt; }
     this.parts = this.parts.filter(p => p.life > 0);
     for (const s of this.shocks) s.life -= dt;

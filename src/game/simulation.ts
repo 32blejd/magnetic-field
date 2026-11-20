@@ -1,9 +1,9 @@
-import { ANTI_TIER, TIERS, type Tier } from '../data/tiers';
+import { ANTI_TIER, TIERS, type CoinKind, type Tier } from '../data/tiers';
 import { ANTI, BOARD, COIN_RADIUS, COMBO, EVENTS, PULL, SPAWN_AREA, SPAWN_TIME, TOUCH_DISTANCE } from '../data/tuning';
 import { UPGRADES } from '../data/upgrades';
 import { antiUnlocked, comboMult, comboUnlocked, pulseUnlocked } from './abilities';
 import { checkGoals } from './goals';
-import { earn } from './money';
+import { coinValue, earn, hasEarned } from './money';
 import { rand } from './rng';
 import { getStats, type Stats } from './stats';
 import type { Coin, GameEvent, GameState, Vec } from './types';
@@ -18,7 +18,7 @@ function rollTier(st: GameState, rarityBonus: number): Tier {
   return TIERS[TIERS.length - 1]!;
 }
 
-function makeCoin(st: GameState, x: number, y: number, angle: number, tier: Tier): Coin {
+function makeCoin(st: GameState, x: number, y: number, angle: number, tier: CoinKind): Coin {
   const anti = tier.id === 'anti';
   return {
     x, y, dx: Math.cos(angle), dy: Math.sin(angle), age: 0, phase: rand(st) * 6,
@@ -48,7 +48,7 @@ function updateTimers(st: GameState, dt: number): void {
 
 function updateUnlocks(st: GameState, out: GameEvent[]): void {
   for (const u of UPGRADES) {
-    if (st.unlocked[u.id] || st.totalEarned < u.unlockAt) continue;
+    if (st.unlocked[u.id] || !hasEarned(st, u.unlockAt)) continue;
     st.unlocked[u.id] = true;
     st.unlockOrder.push(u.id);
     out.push({ type: 'unlock', id: u.id });
@@ -92,7 +92,7 @@ function collect(st: GameState, S: Stats, c: Coin, out: GameEvent[]): void {
     st.comboT = COMBO.window;
     st.stats.bestCombo = Math.max(st.stats.bestCombo, st.combo);
   }
-  const value = S.value * c.mult * comboMult(st.combo);
+  const value = coinValue(S.value, c.mult, comboMult(st.combo));
   earn(st, value);
   if (c.tier !== 'anti') st.stats.caught[c.tier]++;
   out.push({ type: 'pickup', coin: c, value });

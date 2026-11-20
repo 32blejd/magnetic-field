@@ -20,4 +20,8 @@ export const TIERS: Tier[] = [
   { id: 'basic', mult: 1, chance: 1, pull: 1 },
 ];
 
-export const ANTI_TIER: Tier = { id: 'anti', mult: 1, chance: ANTI.chance, pull: ANTI.pull };
+/** What a coin takes from its tier. */
+export type CoinKind = Pick<Tier, 'id' | 'mult' | 'pull'>;
+
+/** Anti-coins are not rolled with TIERS – their spawn chance is ANTI.chance (data/tuning.ts). */
+export const ANTI_TIER: CoinKind = { id: 'anti', mult: 1, pull: ANTI.pull };

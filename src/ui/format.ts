@@ -19,7 +19,7 @@ export function formatUpgradeValue(id: UpgradeId, v: number): string {
     case 'range': return `${Math.round(v)} px`;
     case 'spawn': return `${v.toFixed(2)} /s`;
     case 'strength': return `${v.toFixed(2)}×`;
-    case 'capacity': return `${v} coins`;
+    case 'capacity': return `${formatNumber(v)} coins`;
     case 'rarity': return `+${(v * 100).toFixed(1)}%`;
     case 'speed': return `${v.toFixed(2)} s`;
   }

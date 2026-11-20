@@ -13,7 +13,7 @@ import { COLORS, FONT } from './theme';
 function drawStatsLine(ctx: Ctx, st: GameState): void {
   const s = st.stats;
   ctx.fillStyle = 'rgba(95,155,179,.7)'; ctx.font = `11px ${FONT}`; ctx.textBaseline = 'top';
-  ctx.fillText(S.hudLine(formatTime(st.t), Math.round(catchRate(st) * 100), s.missed, s.bestCombo), BOARD.x + 12, BOARD.y + 10);
+  ctx.fillText(S.hudLine(formatTime(st.t), Math.round(catchRate(st) * 100), formatNumber(s.missed), formatNumber(s.bestCombo)), BOARD.x + 12, BOARD.y + 10);
   ctx.textBaseline = 'alphabetic';
 }
 

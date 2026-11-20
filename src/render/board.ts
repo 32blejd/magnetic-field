@@ -2,6 +2,7 @@ import { ANTI, BOARD, COIN_RADIUS, COMBO, MAGNET_RADIUS, SPAWN_TIME } from '../d
 import { comboMult } from '../game/abilities';
 import type { Stats } from '../game/stats';
 import type { AntiWarning, Coin, GameState, Vec } from '../game/types';
+import { formatNumber } from '../ui/format';
 import { S } from '../ui/strings';
 import { clamp, easeOutBack, glow, hexPath, noGlow, starPath, type Ctx } from './draw';
 import type { Effects } from './effects';
@@ -22,7 +23,7 @@ function drawGrid(ctx: Ctx, st: GameState): void {
   ctx.stroke();
 }
 
-function drawTrail(ctx: Ctx, c: Coin, trail: Vec[], t: number): void {
+function drawTrail(ctx: Ctx, c: Coin, trail: readonly Vec[], t: number): void {
   for (let k = 1; k < trail.length; k++) {
     const p0 = trail[k - 1]!, p1 = trail[k]!, a = k / trail.length;
     ctx.strokeStyle = tierColor(c.tier, t - (trail.length - k) * 0.03, c.phase);
@@ -81,7 +82,7 @@ export function drawCoin(ctx: Ctx, c: Coin, scale: number, t: number): void {
 function drawCoins(ctx: Ctx, st: GameState, fx: Effects): void {
   const t = st.t;
   for (const c of st.coins) {
-    if (c.tier !== 'basic') drawTrail(ctx, c, fx.trail(c), t);
+    if (c.tier !== 'basic') drawTrail(ctx, c, fx.trailOf(c), t);
     if (c.age < SPAWN_TIME) { // spawn animation: subtle expanding ring + pop-in
       const k = c.age / SPAWN_TIME, col = tierColor(c.tier, t, c.phase);
       ctx.globalAlpha = 0.7 * (1 - k); ctx.strokeStyle = col; ctx.lineWidth = 1.5; glow(ctx, col, 6);
@@ -170,7 +171,7 @@ function drawMagnet(ctx: Ctx, st: GameState, m: Vec, range: number): void {
     ctx.beginPath(); ctx.arc(m.x, m.y, MAGNET_RADIUS + 5, -Math.PI / 2, -Math.PI / 2 + k * Math.PI * 2); ctx.stroke();
     ctx.fillStyle = col; ctx.font = `700 ${hot ? 14 : 13}px ${FONT}`;
     ctx.fillText(`×${mult.toFixed(1)}`, m.x + 18, m.y - 14); noGlow(ctx);
-    ctx.fillStyle = COLORS.sub; ctx.font = `10px ${FONT}`; ctx.fillText(S.combo(st.combo), m.x + 18, m.y - 2);
+    ctx.fillStyle = COLORS.sub; ctx.font = `10px ${FONT}`; ctx.fillText(S.combo(formatNumber(st.combo)), m.x + 18, m.y - 2);
   }
 }
 

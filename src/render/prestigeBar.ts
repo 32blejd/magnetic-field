@@ -1,13 +1,14 @@
 import { PRESTIGE_GOAL } from '../data/tuning';
+import { earnedShare } from '../game/money';
 import type { GameState } from '../game/types';
-import { formatShort } from '../ui/format';
+import { formatNumber, formatShort } from '../ui/format';
 import { PRESTIGE_BAR } from '../ui/layout';
 import { S } from '../ui/strings';
 import { glow, noGlow, type Ctx } from './draw';
 import { COLORS, FONT } from './theme';
 
 export function drawPrestigeBar(ctx: Ctx, st: GameState): void {
-  const R = PRESTIGE_BAR, progress = Math.min(1, st.totalEarned / PRESTIGE_GOAL), ready = progress >= 1;
+  const R = PRESTIGE_BAR, progress = earnedShare(st, PRESTIGE_GOAL), ready = progress >= 1;
   ctx.save();
   ctx.fillStyle = COLORS.panel; ctx.beginPath(); ctx.roundRect(R.x, R.y, R.w, R.h, 10); ctx.fill();
   ctx.strokeStyle = ready ? COLORS.magenta : 'rgba(0,229,255,.35)'; ctx.lineWidth = 1;
@@ -26,6 +27,6 @@ export function drawPrestigeBar(ctx: Ctx, st: GameState): void {
     ctx.beginPath(); ctx.roundRect(bx, by, Math.max(8, bw * progress), 8, 4); ctx.fill(); noGlow(ctx);
   }
   ctx.fillStyle = COLORS.text; ctx.font = `700 12px ${FONT}`; ctx.textAlign = 'right';
-  ctx.fillText(S.cores(0), R.x + R.w - 16, R.y + R.h / 2);
+  ctx.fillText(S.cores(formatNumber(0)), R.x + R.w - 16, R.y + R.h / 2);
   ctx.restore();
 }
