@@ -36,6 +36,10 @@ function drawPulseWidget(ctx: Ctx, st: GameState): void {
     ctx.beginPath(); ctx.roundRect(x, y, w, h, 6); ctx.stroke(); noGlow(ctx);
     ctx.fillStyle = ready || active ? COLORS.magenta : COLORS.sub;
     ctx.fillText(active ? S.pulseActive : ready ? S.pulseReady : S.pulseCooldown(Math.ceil(st.pulseCd)), x + 10, y + h / 2);
+    if (bonuses(st.meta).autoPulse) { // Auto-pulse tag on the right
+      ctx.fillStyle = COLORS.green; ctx.font = `700 9px ${FONT}`; ctx.textAlign = 'right';
+      ctx.fillText(S.auto, x + w - 8, y + h / 2); ctx.textAlign = 'left';
+    }
   }
   ctx.textBaseline = 'alphabetic';
 }

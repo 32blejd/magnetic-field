@@ -71,7 +71,7 @@ function drawNodes(ctx: Ctx, st: GameState, v: TreeView, t: number): void {
   for (const n of NODES) {
     if (!nodeVisible(nodes, n)) continue;
     const p = toScreen(v, nodePos(n)), r = nodeRadius(n) * z, col = BRANCH_COLOR[n.branch];
-    const lv = nodeLevel(nodes, n.id), soon = n.effect === 'soon', canBuy = buyable(v, n);
+    const lv = nodeLevel(nodes, n.id), canBuy = buyable(v, n);
     const pulse = 0.5 + 0.5 * Math.sin(t * 5 + p.x);
     if (lv > 0) {
       glow(ctx, col, v.hover === n ? 26 : 16);
@@ -80,7 +80,7 @@ function drawNodes(ctx: Ctx, st: GameState, v: TreeView, t: number): void {
     } else {
       if (canBuy) glow(ctx, col, 8 + pulse * 10);
       ctx.fillStyle = 'rgba(8,12,30,.9)'; hexPath(ctx, p.x, p.y, r, Math.PI / 6); ctx.fill();
-      ctx.strokeStyle = canBuy ? col : col + (soon ? '33' : '66'); ctx.lineWidth = canBuy ? 1.8 : 1.2;
+      ctx.strokeStyle = canBuy ? col : col + '66'; ctx.lineWidth = canBuy ? 1.8 : 1.2;
       if (!canBuy) ctx.setLineDash([3, 3]);
       ctx.stroke(); ctx.setLineDash([]); noGlow(ctx);
     }
@@ -89,10 +89,10 @@ function drawNodes(ctx: Ctx, st: GameState, v: TreeView, t: number): void {
       hexPath(ctx, p.x, p.y, r + 6 * z, Math.PI / 6 + t * 0.4); ctx.stroke();
     }
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillStyle = lv ? '#fff' : canBuy ? col : col + (soon ? '55' : '99');
+    ctx.fillStyle = lv ? '#fff' : canBuy ? col : col + '99';
     ctx.font = `700 ${Math.round((n.slot === 'key' ? 15 : 12) * z)}px ${FONT}`;
     ctx.fillText(n.icon, p.x, p.y + 1);
-    if (n.id !== 'core') { // level pips + next cost (or SOON)
+    if (n.id !== 'core') { // level pips + next cost
       const yy = p.y + r + 9 * z;
       if (n.max > 1) for (let i = 0; i < n.max; i++) {
         ctx.fillStyle = i < lv ? col : col + '33';
@@ -100,8 +100,7 @@ function drawNodes(ctx: Ctx, st: GameState, v: TreeView, t: number): void {
       }
       const ty = yy + (n.max > 1 ? 11 : 2) * z;
       ctx.font = `${Math.round(10 * z)}px ${FONT}`;
-      if (soon) { ctx.fillStyle = COLORS.sub + 'aa'; ctx.fillText('SOON', p.x, ty); }
-      else if (!nodeMaxed(nodes, n)) {
+      if (!nodeMaxed(nodes, n)) {
         ctx.fillStyle = v.mode === 'shift' && cores >= nodeCost(nodes, n) ? COLORS.core : COLORS.sub;
         ctx.fillText(`${nodeCost(nodes, n)} ◆`, p.x, ty);
       }
@@ -194,7 +193,6 @@ function drawTooltip(ctx: Ctx, st: GameState, v: TreeView, cursor: Vec): void {
   ctx.fillStyle = COLORS.text; ctx.font = `11px ${FONT}`; lines.forEach((l, i) => ctx.fillText(l, x + 12, y + 44 + i * 15));
   let foot: string, footCol: string;
   if (n.id === 'core') { foot = S.nodeAlways; footCol = col; }
-  else if (n.effect === 'soon') { foot = S.nodeSoon; footCol = COLORS.sub; }
   else if (nodeMaxed(nodes, n)) { foot = S.nodeMax(formatNumber(lv), formatNumber(n.max)); footCol = col; }
   else {
     const cost = nodeCost(nodes, n), poor = cores < cost;

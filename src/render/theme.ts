@@ -15,6 +15,7 @@ export const COLORS = {
   sub: '#5f9bb3',
   green: '#4dff9a',
   core: '#b98cff',
+  void: '#9d4dff',
 } as const;
 
 /** Core tree branch colors (compass directions). N is red like a real compass needle (distinct from the anti-coin red). */
@@ -25,6 +26,7 @@ export function tierColor(tier: TierId, t: number, phase = 0): string {
   switch (tier) {
     case 'gold': return COLORS.amber;
     case 'prism': return `hsl(${(t * 220 + phase * 60) % 360}, 100%, 62%)`;
+    case 'void': return COLORS.void;
     case 'anti': return COLORS.red;
     case 'basic': return COLORS.cyan;
   }

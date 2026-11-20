@@ -10,7 +10,8 @@
     "test": "node scripts/vitest.mjs run",
     "test:watch": "node scripts/vitest.mjs",
     "typecheck": "tsc --noEmit",
-    "sim": "tsx scripts/balance-sim.ts"
+    "sim": "tsx scripts/balance-sim.ts",
+    "sim:m5": "tsx scripts/m5-impact.ts"
   },
   "devDependencies": {
     "@types/node": "^26.6.6",

@@ -16,6 +16,10 @@ export interface Shock { x: number; y: number; life: number; max: number; radius
 export interface Banner { title: string; sub: string; color: string; life: number; total: number }
 
 const TRAIL_LENGTH = 14;
+const DRONE_TRAIL = 7;
+
+/** Recent drone positions (oldest first) and the last direction it flew in – for the ship look and thruster trail. */
+export interface DroneLook { trail: Vec[]; dir: number }
 
 export class Effects {
   parts: Particle[] = [];
@@ -25,10 +29,11 @@ export class Effects {
   banners: Banner[] = [];
   flash: Partial<Record<UpgradeId, number>> = {};
   /** "+X" pops next to the wallet when a mini-goal pays out. */
-  goalPops: { text: string; life: number }[] = [];
+  goalPops: { text: string; life: number; color?: string }[] = [];
   shake = 0;
   private earned: { t: number; v: number }[] = [];
   private trails = new WeakMap<Coin, Vec[]>();
+  private drones = new WeakMap<Vec, DroneLook>();
 
   banner(title: string, sub: string, color: string, life = 2.4): void {
     this.banners.push({ title, sub, color, life, total: life });
@@ -47,8 +52,9 @@ export class Effects {
         case 'pickup': {
           const c = e.coin, rare = c.tier !== 'basic';
           this.earned.push({ t: st.t, v: e.value });
-          this.burst(c.x, c.y, c.tier === 'prism' ? 28 : c.tier === 'gold' ? 18 : 10, rare ? 150 : 90, c.tier);
-          if (rare) this.shocks.push({ x: c.x, y: c.y, life: 0.45, max: 0.45, radius: 50, kind: c.tier });
+          const big = c.tier === 'void';
+          this.burst(c.x, c.y, big ? 40 : c.tier === 'prism' ? 28 : c.tier === 'gold' ? 18 : 10, big ? 200 : rare ? 150 : 90, c.tier);
+          if (rare) this.shocks.push({ x: c.x, y: c.y, life: big ? 0.6 : 0.45, max: big ? 0.6 : 0.45, radius: big ? 80 : 50, kind: c.tier });
           this.floats.push({ x: c.x, y: c.y - 8, life: rare ? 1.3 : 0.9, text: `+${formatNumber(e.value)}`, tier: c.tier });
           break;
         }
@@ -90,6 +96,21 @@ export class Effects {
           this.floats.push({ x: e.x, y: e.y - 10, life: 1.2, text: M.shieldPop, tier: 'gold', color: COLORS.core });
           this.shocks.push({ x: e.x, y: e.y, life: 0.4, max: 0.4, radius: 36, kind: 'pulse' });
           break;
+        case 'chain':
+          this.shocks.push({ x: e.x, y: e.y, life: 0.5, max: 0.5, radius: e.radius, kind: 'prism' });
+          this.floats.push({ x: e.x, y: e.y - 26, life: 0.9, text: M.chainPop, tier: 'prism' });
+          break;
+        case 'interest':
+          this.earned.push({ t: st.t, v: e.amount });
+          // cyan "+X" next to the wallet (mini-goals are amber); tiny early-run payouts would just read "+0"
+          if (e.amount >= 1) this.goalPops.push({ text: `+${formatNumber(e.amount)}`, life: 1.6, color: COLORS.cyan });
+          break;
+        case 'autobuy':
+          this.flash[e.id] = 0.3;
+          break;
+        case 'autopulse':
+          this.pulseShock(e, e.range);
+          break;
         case 'goal':
           this.earned.push({ t: st.t, v: e.reward });
           this.banner(S.goalComplete(formatNumber(e.reward)), S.goalText(e.goal), COLORS.amber, 3);
@@ -102,7 +123,7 @@ export class Effects {
   /** Clears everything tied to the previous run (after Polarity Shift). */
   reset(): void {
     this.parts = []; this.floats = []; this.shocks = []; this.banners = []; this.flash = {}; this.goalPops = [];
-    this.shake = 0; this.earned = []; this.trails = new WeakMap();
+    this.shake = 0; this.earned = []; this.trails = new WeakMap(); this.drones = new WeakMap();
   }
 
   pulseShock(at: Vec, radius: number): void {
@@ -112,6 +133,21 @@ export class Effects {
   /** Recent positions of a rare coin, oldest first (recorded in update(), so the length doesn't depend on frame rate). */
   trailOf(c: Coin): readonly Vec[] {
     return this.trails.get(c) ?? [];
+  }
+
+  droneLook(d: Vec): DroneLook {
+    return this.drones.get(d) ?? { trail: [], dir: -Math.PI / 2 };
+  }
+
+  private recordDrones(st: GameState): void {
+    for (const d of st.drones) {
+      let look = this.drones.get(d);
+      if (!look) { look = { trail: [], dir: -Math.PI / 2 }; this.drones.set(d, look); }
+      const last = look.trail[look.trail.length - 1];
+      if (last && Math.hypot(d.x - last.x, d.y - last.y) > 0.3) look.dir = Math.atan2(d.y - last.y, d.x - last.x);
+      look.trail.push({ x: d.x, y: d.y });
+      if (look.trail.length > DRONE_TRAIL) look.trail.shift();
+    }
   }
 
   private recordTrails(st: GameState): void {
@@ -131,6 +167,7 @@ export class Effects {
   /** Advance visual effects; called once per simulation step (fixed dt). */
   update(dt: number, st: GameState): void {
     this.recordTrails(st);
+    this.recordDrones(st);
     for (const p of this.parts) { p.x += p.vx * dt; p.y += p.vy * dt; p.life -= dt; }
     this.parts = this.parts.filter(p => p.life > 0);
     for (const s of this.shocks) s.life -= dt;

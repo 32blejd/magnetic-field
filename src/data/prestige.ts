@@ -14,6 +14,9 @@ export const PRESTIGE = {
   coreValuePerCore: 0.02,
 };
 
+/** Auto-shift targets as multiples of the run goal (0 = off). Cores ≈ 10 × √multiple: 10 · 14 · 20. */
+export const AUTO_SHIFT_TARGETS: readonly number[] = [0, 1, 2, 4];
+
 /** Compass directions of the four branches. */
 export type Branch = 'N' | 'E' | 'S' | 'W';
 export const BRANCHES: readonly Branch[] = ['N', 'E', 'S', 'W'];
@@ -34,8 +37,8 @@ export type NodeEffect =
   | 'value' | 'headStart' | 'discount' | 'fastTrack' | 'compound' | 'coreYield'
   // W – automation
   | 'bulkBuy' | 'magnetMemory' | 'homingPrisms'
-  /** New mechanics planned for M5 – shown in the tree but not purchasable yet. */
-  | 'soon';
+  // keystones and M5 mechanics
+  | 'satellites' | 'chainReaction' | 'voidCoin' | 'interest' | 'autoBuy' | 'autoPulse' | 'autoShift' | 'drones';
 
 export interface NodeDef {
   id: string;
@@ -62,16 +65,16 @@ export const NODES: readonly NodeDef[] = [
     b4: { max: 1, cost: [5], effect: 'comboShield', icon: '⛉' },
     b5: { max: 2, cost: [3, 5], effect: 'stun', icon: '⏚' },
     b6: { max: 1, cost: [5], effect: 'comboMax', icon: '×' },
-    key: { max: 3, cost: [10, 15, 20], effect: 'soon', icon: '◎' }, // Satellites
+    key: { max: 3, cost: [10, 15, 20], effect: 'satellites', icon: '◎' },
   }),
   ...branch('E', {
     b1: { max: 3, cost: [2, 3, 4], effect: 'rareChance', icon: '%' },
     b2: { max: 1, cost: [6], effect: 'prismValue', icon: '◇' },
     b3: { max: 2, cost: [2, 4], effect: 'eventRate', icon: '~' },
-    b4: { max: 1, cost: [6], effect: 'soon', icon: '⚡' }, // Chain Reaction
+    b4: { max: 1, cost: [6], effect: 'chainReaction', icon: '⚡' },
     b5: { max: 1, cost: [5], effect: 'meteorShower', icon: '☄' },
     b6: { max: 1, cost: [5], effect: 'goldenFountain', icon: '✺' },
-    key: { max: 1, cost: [15], effect: 'soon', icon: '●' }, // Void Coin
+    key: { max: 1, cost: [15], effect: 'voidCoin', icon: '●' },
   }),
   ...branch('S', {
     b1: { max: 5, cost: [1, 2, 3, 4, 5], effect: 'value', icon: '$+' },
@@ -80,16 +83,16 @@ export const NODES: readonly NodeDef[] = [
     b4: { max: 1, cost: [4], effect: 'fastTrack', icon: '»' },
     b5: { max: 1, cost: [5], effect: 'compound', icon: '↗' },
     b6: { max: 2, cost: [6, 10], effect: 'coreYield', icon: '◆+' },
-    key: { max: 1, cost: [14], effect: 'soon', icon: '%$' }, // Interest
+    key: { max: 1, cost: [14], effect: 'interest', icon: '%$' },
   }),
   ...branch('W', {
     b1: { max: 1, cost: [1], effect: 'bulkBuy', icon: '≡' },
-    b2: { max: 1, cost: [6], effect: 'soon', icon: 'A' }, // Auto-buyer
+    b2: { max: 1, cost: [6], effect: 'autoBuy', icon: 'A' },
     b3: { max: 1, cost: [3], effect: 'magnetMemory', icon: 'M' },
-    b4: { max: 1, cost: [8], effect: 'soon', icon: '⟳' }, // Auto-pulse
+    b4: { max: 1, cost: [8], effect: 'autoPulse', icon: '⟳' },
     b5: { max: 1, cost: [4], effect: 'homingPrisms', icon: '◇→' },
-    b6: { max: 1, cost: [12], effect: 'soon', icon: '⇄' }, // Auto-shift
-    key: { max: 3, cost: [12, 18, 24], effect: 'soon', icon: '✦' }, // Drones
+    b6: { max: 1, cost: [12], effect: 'autoShift', icon: '⇄' },
+    key: { max: 3, cost: [12, 18, 24], effect: 'drones', icon: '✦' },
   }),
 ];
 

@@ -15,9 +15,9 @@ describe('mini-goals', () => {
     ]);
   });
 
-  it('count all good coins for the coin goals and complete each goal once', () => {
+  it('count all good coins (Void included) for the coin goals and complete each goal once', () => {
     const st = createState();
-    st.stats.caught = { basic: 5, gold: 3, prism: 2 };
+    st.stats.caught = { basic: 4, gold: 3, prism: 2, void: 1 };
     const out: GameEvent[] = [];
     checkGoals(st, out);
     expect(out.filter(e => e.type === 'goal').map(e => e.type === 'goal' && e.goal.id)).toEqual(['coins-10']);

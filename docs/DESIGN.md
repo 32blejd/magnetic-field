@@ -26,6 +26,7 @@ The target feeling: every upgrade is **visible on screen** (bigger field, more c
   | Basic | 89% | ×1 | ×1 | none (pull ×1) | cyan hexagon |
   | Gold | 10% | ×2 | ×2 | pull ×0.85 | larger amber double hexagon, pulsing, short trail, shockwave on pickup |
   | Prism | 1% | ×3 | ×3 | pull ×0.70 | largest, hue-cycling rainbow, orbiting sparks, trail, big shockwave on pickup |
+  | Void (Void Coin keystone) | 0.3%, rolled first; Rarity bonuses don't apply | ×10 | ×1.5 | pull ×0.60 | black hole: dark disc, two spinning violet/pink accretion arcs, thin horizon ring, trail, biggest burst on pickup |
   | Anti | 0.5% (after 25,000 earned) | – | ×0.2 | pull ×0.60 (a bit heavier than Prism); **not affected by Pulse** | red spiky star with an ×; 1 s warning marker before it appears; vanishes after 5 s; see below |
 
   Pickup text shows just the amount (e.g. `+2`) in the tier's color; no multiplier tag.
@@ -144,20 +145,45 @@ Checked with the balance simulator ([scripts/balance-sim.ts](../scripts/balance-
 
 Player skill matters (~5 min between a fast and a slow player): combo, anti-coins and Pulse all reward active play.
 
-Later runs (average bot; after each shift it spends Cores on the cheapest purchasable nodes and all crystals in the Magnetron). The goal grows linearly (+1.5M per shift), so each run is a bit faster than the previous one:
+Later runs (bot; after each shift it spends Cores on the cheapest purchasable nodes and all crystals in the Magnetron). The goal grows linearly (+1.5M per shift), so each run is a bit faster than the previous one:
 
-| Run | Goal | Cores earned before the run | Reached in |
-|---|---|---|---|
-| 1 | 1M | 0 | 18:06 |
-| 2 | 2.5M | 10 | 17:22 |
-| 3 | 4M | 20 | 13:30 |
-| 4 | 5.5M | 30 | 12:19 |
-| 5 | 7M | 40 | 9:43 |
-| 6 | 8.5M | 50 | 8:49 |
-| 7 | 10M | 60 | 6:54 |
-| 8 | 11.5M | 70 | 5:49 |
+| Run | Goal | Cores earned before the run | Slow (250) | Average (400) | Fast (600) |
+|---|---|---|---|---|---|
+| 1 | 1M | 0 | 20:47 | 18:06 | 15:49 |
+| 2 | 2.5M | 10 | 18:17 | 16:59 | 15:43 |
+| 3 | 4M | 20 | 13:38 | 13:18 | 12:17 |
+| 4 | 5.5M | 30 | 11:55 | 11:46 | 10:59 |
+| 5 | 7M | 40 | 9:40 | 9:07 | 8:47 |
+| 6 | 8.5M | 50 | 8:43 | 8:15 | 7:27 |
+| 7 | 10M | 60 | 6:16 | 6:08 | 5:49 |
+| 8 | 11.5M | 70 | 5:25 | 5:09 | 4:49 |
+| 9 | 13M | 80 | 4:54 | 4:42 | 4:32 |
+| 10 | 14.5M | 90 | 3:44 | 3:21 | 3:22 |
+| 12 | 17.5M | 110 | 2:48 | 2:31 | 2:09 |
+| 15 | 22M | 140 | 1:41 | 1:36 | 1:24 |
 
-From ~run 8 the bot has bought most purchasable (non-SOON) nodes and runs drop under 6 min – that's where M5 nodes and the endgame come in. An exponential goal (×2–3 per shift) was tried and rejected: in-run income has a ceiling (upgrade caps), so from run 5 the goal took hours. Goal step 1.5 (instead of 1) compensates for Lodestones.
+The greedy bot buys the cheapest nodes first, so it reaches M5 nodes very late (only Chain Reaction, from run 13) – the table is mostly the non-M5 tree. Runs drop under 3 min from run 11 even without M5 nodes: **late-run balance is the next roadmap item.** An exponential goal (×2–3 per shift) was tried and rejected: in-run income has a ceiling (upgrade caps), so from run 5 the goal took hours. Goal step 1.5 (instead of 1) compensates for Lodestones.
+
+**M5 node impact** (`npm run sim:m5 -- [shifts=9] [seeds=3]`): the same run 10 (goal 14.5M, greedy tree from 9 shifts) played by the average bot with one M5 node added, and an idle run with nobody touching the mouse:
+
+| Added to the run-10 tree | Run time | vs. without |
+|---|---|---|
+| – | 3:21 | – |
+| Satellites 1 / 3 | 3:11 / 3:08 | −5% / −6% |
+| Chain Reaction | 3:19 | −1% |
+| Void Coin | 3:15 | −3% |
+| Interest | 3:18 | −1% (the bot spends everything at once; Interest rewards saving up) |
+| Drones 1 / 3 | 3:22 / 3:05 | +1% / −8% |
+| all M5 nodes | 2:55 | −13% |
+
+| Idle (no cursor), Auto-buyer + | Income over 10 min |
+|---|---|
+| Drones 1 | 31k /s |
+| Drones 2 | 56k /s |
+| Drones 3 | 70k /s |
+| *(active average bot, no Drones)* | *72k /s* |
+
+In active play the keystones are a modest boost; their big effect is idle play – 3 Drones earn about as much as an active player (see Open questions).
 
 Run: `npm run sim -- [cursorSpeed] [runs] [shifts]`. Quick tuning without editing files: `OV='{"value":{"growth":1.6}}' npm run sim`. `npm test` includes a guard that the average bot reaches 1M in the first run in 16–20 min.
 
@@ -211,15 +237,15 @@ The run is paused while the tree or the confirm dialog is open. Keys: `T` tree p
 | Combo Shield | once every 30 s an anti-coin doesn't reset the combo | 1 | 5 | ✅ |
 | Grounding | anti-coin short circuit −0.4 s / lv | 2 | 3 · 5 | ✅ |
 | Combo Limit | max combo ×2 → ×2.5 | 1 | 5 | ✅ |
-| Satellites (keystone) | mini-magnets orbiting the cursor | 3 | 10 · 15 · 20 | SOON (M5) |
+| Satellites (keystone) | mini-magnets orbiting the cursor, +1 / lv | 3 | 10 · 15 · 20 | ✅ |
 | **E · Coins & events** (amber) | | | | |
 | Lucky Charge | +1% Gold and Prism chance / lv | 3 | 2 · 3 · 4 | ✅ |
 | Prism Resonance | Prism worth ×4 (speed stays ×3) | 1 | 6 | ✅ |
 | Storm Front | events +20% more often / lv | 2 | 2 · 4 | ✅ |
-| Chain Reaction | Prism pickup pulls coins within 80 px | 1 | 6 | SOON (M5) |
+| Chain Reaction | catching a Prism also collects every coin within 80 px | 1 | 6 | ✅ |
 | Meteor Shower | new event: a line of 12 fast coins sweeps in from one edge | 1 | 5 | ✅ |
 | Golden Fountain | Fountain events spray Gold only | 1 | 5 | ✅ |
-| Void Coin (keystone) | new ×10 coin tier | 1 | 15 | SOON (M5) |
+| Void Coin (keystone) | new ×10 coin tier (0.3%) | 1 | 15 | ✅ |
 | **S · Economy** (cyan) | | | | |
 | Dividend | +15% coin value / lv | 5 | 1 · 2 · 3 · 4 · 5 | ✅ |
 | Head Start | start runs with 500 / 5k / 50k coins | 3 | 2 · 4 · 6 | ✅ |
@@ -227,17 +253,30 @@ The run is paused while the tree or the confirm dialog is open. Keys: `T` tree p
 | Fast Track | upgrades, Combo, Pulse unlock at half the earnings | 1 | 4 | ✅ |
 | Compound | +1% value per run minute, max +30% | 1 | 5 | ✅ |
 | Core Yield | +20% Cores per shift / lv | 2 | 6 · 10 | ✅ |
-| Interest (keystone) | +1% of held coins every 10 s | 1 | 14 | SOON (M5) |
+| Interest (keystone) | +1% of held coins every 10 s, max 10 s of perfect income | 1 | 14 | ✅ |
 | **W · Automation** (green) | | | | |
 | Bulk Buy | Shift + key/click buys max levels | 1 | 1 | ✅ |
-| Auto-buyer | buys the cheapest upgrade automatically | 1 | 6 | SOON (M5) |
+| Auto-buyer | buys the cheapest affordable upgrade, max 4 levels/s | 1 | 6 | ✅ |
 | Magnet Memory | field keeps working 1 s after leaving the board | 1 | 3 | ✅ |
-| Auto-pulse | Pulse fires when 5+ coins are in range | 1 | 8 | SOON (M5) |
+| Auto-pulse | Pulse fires when ready and 5+ coins are within Pulse range | 1 | 8 | ✅ |
 | Homing Prisms | Prism coins steer toward the magnet from anywhere | 1 | 4 | ✅ |
-| Auto-shift | shift automatically at a set target | 1 | 12 | SOON (M5) |
-| Drones (keystone) | autonomous magnets | 3 | 12 · 18 · 24 | SOON (M5) |
+| Auto-shift | shift automatically at 1× / 2× / 4× the goal; Cores are banked | 1 | 12 | ✅ |
+| Drones (keystone) | autonomous magnets, +1 / lv | 3 | 12 · 18 · 24 | ✅ |
 
-"SOON" nodes are visible in the tree but can't be bought until M5.
+### Keystones and automation (M5)
+
+Numbers live in `src/data/tuning.ts` (`SATELLITES`, `DRONES`, `CHAIN`, `INTEREST`, `AUTO`) and `src/data/tiers.ts` (`VOID_TIER`); logic in `src/game/helpers.ts` (Satellites, Drones), `src/game/automation.ts` (Auto-buyer, Auto-pulse), `src/game/prestige.ts` (Auto-shift) and `src/game/simulation.ts` (Void, Chain Reaction, Interest). Without these nodes the simulation is bit-for-bit the same as before M5 (same RNG sequence).
+
+- **Helper magnets** (Satellites, Drones) pull and collect good coins with the main magnet's Strength, using the normal pull formula with their own field radius. They **ignore anti-coins** (no pull, no short circuit) and Pulse. Where fields overlap, the main magnet wins. Their pickups are normal pickups (combo, goals, crystals).
+  - Look (mockup variant B): Satellites are small magenta hexes tethered to the magnet by a faint beam, with a soft glowing field; Drones are small green ships pointing where they fly, with a thruster trail and a faint field ring (direction and trail are visual-only, kept in `render/effects.ts`).
+  - **Satellites**: evenly spaced on an orbit = the field radius without Pulse, turning at 2.4 rad/s; each has a field of 40% of that radius. They exist only while the main magnet does (gone off the board and during a short circuit; with Magnet Memory they stay at the remembered spot).
+  - **Drones**: start on a small ring around the board centre, each flies at 140 px/s toward the nearest good coin no other drone has claimed (and stays put when there is none); field = 45% of the main field radius. They keep working while the cursor is off the board or short-circuited. Positions are transient (not saved).
+- **Void Coin**: rolled before the other tiers with its own 0.3% chance (an extra RNG roll only when the keystone is owned).
+- **Chain Reaction**: after the coin loop of a step, every good coin past its spawn animation within 80 px of a caught Prism is collected; a Prism caught this way chains again. A `CHAIN` ring and pop show it.
+- **Interest**: whenever the run clock passes a multiple of 10 s, gain `min(1% of held coins, 10 s of perfect income)` (perfect income = value per coin × base spawn rate, as for mini-goals). Counts as earned. Cyan `+X` pop next to the wallet (mini-goal pops are amber). The cap keeps a long idle session (Drones + Auto-buyer) from growing exponentially.
+- **Auto-buyer**: every step, if its 0.25 s cooldown is over, buys the cheapest affordable unlocked upgrade (ties → panel order). The row flashes; `AUTO` tag next to UPGRADES.
+- **Auto-pulse**: fires Pulse when it's ready and 5+ good coins (past the spawn animation) are within the Pulse radius (field × Pulse multiplier) of an active magnet. `AUTO` tag in the Pulse widget.
+- **Auto-shift**: toggle in the shift bar (left of the Core tree button; click or key `A`) cycles OFF → ×1 → ×2 → ×4 the run goal (≈ 10 · 14 · 20 Cores). Off by default. When the target is earned, the run restarts on the spot without the tree screen; the Cores are **banked** and spent on the next manual shift (turn AUTO off to shift by hand). The setting is saved (`meta.autoShift`, save v4).
 
 ## Milestones
 
@@ -248,14 +287,14 @@ The run is paused while the tree or the confirm dialog is open. Keys: `T` tree p
 | **M2** | Shop with the 7 core upgrades + progressive unlocks, coin tiers, combo, number formatting, save/load | the "collect → buy" loop works and survives a page refresh | ✅ |
 | **M3** | Events, Pulse, anti-coins, run stats, mini-goals | the main loop has variety and rewards skill | ✅ |
 | **M4** | Polarity Shift: Cores, Core tree screen (browse from 100k, spend on shift, confirm), simple nodes (stat bonuses) | there's a reason to start over | ✅ |
-| **M5** | Lodestones / Magnetron ✅ · keystones and mechanics from the tree: Satellites, Void Coin, Chain Reaction, Interest, auto-buyer, Auto-pulse, Auto-shift, Drones | the game partly plays itself | in progress |
+| **M5** | Lodestones / Magnetron ✅ · keystones and mechanics from the tree: Satellites, Void Coin, Chain Reaction, Interest, auto-buyer, Auto-pulse, Auto-shift, Drones ✅ | the game partly plays itself | ✅ (look chosen from [mockups/m5-visuals.html](mockups/m5-visuals.html): variant B) |
 | **M6** | Polish: sounds, more particles, save export UI, satellites | the game *feels* good | |
 
 **MVP = M0–M2.** Collecting coins has to be fun on its own before we add more systems. M0–M3 were built by porting a single-file JS prototype to TypeScript (`src/`). The prototype was then removed so the numbers live in one place; it's still in the git history (first commit, `docs/mockups/`).
 
 ## Debug URL params (testing)
 
-Work on `npm run dev` / `npm run preview`: `?nosave=1` don't load/write the save · `?reset=1` clear the save · `?warm=N` fast-forward N seconds · `?earned=N` start as if N coins were earned (unlocks + money) · `?rare=1` boost rare coin chances · `?anti=1` boost anti-coin chance to 30% (needs `earned` ≥ 25000) · `?cores=N` set unspent Cores · `?open=shift` open the Core tree to spend Cores (with `earned=1000000`) · `?open=browse` open the tree preview · `?shifts=N` set completed shifts · `?crystals=N` set Charge Crystals · `?pulls=N` pull N lodestones on load · `?open=gacha` open the Magnetron. Combine with `&`.
+Work on `npm run dev` / `npm run preview`: `?nosave=1` don't load/write the save · `?reset=1` clear the save · `?warm=N` fast-forward N seconds · `?earned=N` start as if N coins were earned (unlocks + money) · `?rare=1` boost rare coin chances (Void too, if its keystone is owned) · `?anti=1` boost anti-coin chance to 30% (needs `earned` ≥ 25000) · `?cores=N` set unspent Cores · `?open=shift` open the Core tree to spend Cores (with `earned=1000000`) · `?open=browse` open the tree preview · `?shifts=N` set completed shifts · `?crystals=N` set Charge Crystals · `?pulls=N` pull N lodestones on load · `?open=gacha` open the Magnetron · `?nodes=Nkey:3,Wb2` own Core tree nodes (id with an optional level; `all` = every node maxed). Combine with `&`.
 
 ## Out of scope (for now)
 
@@ -270,3 +309,5 @@ Work on `npm run dev` / `npm run preview`: `?nosave=1` don't load/write the save
 - Prism coins (×3 speed) cross half the board in ~0.6 s – check in playtesting whether they're catchable or just frustrating.
 - Combo stays at ×2 for most of the mid/late game for a good player – maybe raise the cap via upgrades or prestige.
 - Miss sparks at the board edge may get noisy late game (many misses per second).
+- Drones are very strong for idle play: 3 Drones + Auto-buyer earn ~97% of an active player's income with nobody at the mouse. Fine for "the game plays itself", or tune down (e.g. Drone speed 140 → 100 px/s or field 45% → 35%) so active play stays clearly better? Needs a target.
+- Keystones give only −1…−8% run time in active play (Satellites 3: −6% for 45 Cores) – consider buffing them in the late-run balance pass.

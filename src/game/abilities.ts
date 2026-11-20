@@ -1,3 +1,4 @@
+import { GOOD_TIERS } from '../data/tiers';
 import { ANTI, COMBO, PULSE } from '../data/tuning';
 import type { UpgradeDef } from '../data/upgrades';
 import { hasEarned } from './money';
@@ -26,8 +27,7 @@ export function triggerPulse(st: GameState): boolean {
 
 /** Share of good coins caught vs. escaped this run (0–1). */
 export function catchRate(st: GameState): number {
-  const c = st.stats.caught;
-  const caught = c.basic + c.gold + c.prism;
+  const caught = GOOD_TIERS.reduce((n, t) => n + st.stats.caught[t], 0);
   const total = caught + st.stats.missed;
   return total ? caught / total : 0;
 }

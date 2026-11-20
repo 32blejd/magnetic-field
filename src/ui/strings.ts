@@ -18,7 +18,6 @@ export const UPGRADE_TEXT: Record<UpgradeId, { name: string; desc: string }> = {
 
 export const BRANCH_TEXT: Record<Branch, string> = { N: 'Active play', E: 'Coins & events', S: 'Economy', W: 'Automation' };
 
-const SOON = ' (coming in a later update)';
 export const NODE_TEXT: Record<string, { name: string; desc: string }> = {
   core: { name: 'Polarity Core', desc: 'The heart of the tree. Every Core you have ever earned gives +2% coin value.' },
   Nb1: { name: 'Charged Field', desc: '+10% magnetic field range per level.' },
@@ -27,28 +26,28 @@ export const NODE_TEXT: Record<string, { name: string; desc: string }> = {
   Nb4: { name: 'Combo Shield', desc: "Once every 30 s, touching an anti-coin doesn't reset your combo." },
   Nb5: { name: 'Grounding', desc: 'Anti-coin short circuit −0.4 s per level.' },
   Nb6: { name: 'Combo Limit', desc: 'Max combo multiplier ×2 → ×2.5.' },
-  Nkey: { name: 'Satellites', desc: 'KEYSTONE · A small magnet orbits your cursor (+1 per level).' + SOON },
+  Nkey: { name: 'Satellites', desc: 'KEYSTONE · A small magnet orbits the edge of your field and pulls in coins on its own (+1 per level). Ignores anti-coins.' },
   Eb1: { name: 'Lucky Charge', desc: '+1% Gold and Prism chance per level.' },
   Eb2: { name: 'Prism Resonance', desc: 'Prism coins are worth ×4 instead of ×3.' },
   Eb3: { name: 'Storm Front', desc: 'Events happen 20% more often per level.' },
-  Eb4: { name: 'Chain Reaction', desc: 'Catching a Prism pulls in every coin within 80 px.' + SOON },
+  Eb4: { name: 'Chain Reaction', desc: 'Catching a Prism also collects every coin within 80 px of it.' },
   Eb5: { name: 'Meteor Shower', desc: 'New event: a line of fast coins sweeps across the board from one edge.' },
   Eb6: { name: 'Golden Fountain', desc: 'Fountain events spray Gold coins only.' },
-  Ekey: { name: 'Void Coin', desc: 'KEYSTONE · New coin tier: Void, ×10 value, 0.3% chance.' + SOON },
+  Ekey: { name: 'Void Coin', desc: 'KEYSTONE · New coin tier: Void, ×10 value, 0.3% chance. Drifts ×1.5 and resists the pull.' },
   Sb1: { name: 'Dividend', desc: '+15% coin value per level.' },
   Sb2: { name: 'Head Start', desc: 'Start each run with 500 / 5,000 / 50,000 coins.' },
   Sb3: { name: 'Discount', desc: 'Upgrades cost 8% less per level.' },
   Sb4: { name: 'Fast Track', desc: 'Upgrades, Combo and Pulse unlock at half the usual earnings.' },
   Sb5: { name: 'Compound', desc: '+1% coin value for every minute of the current run, up to +30%.' },
   Sb6: { name: 'Core Yield', desc: '+20% Cores from every shift per level.' },
-  Skey: { name: 'Interest', desc: 'KEYSTONE · Every 10 s you gain 1% of the coins you hold.' + SOON },
+  Skey: { name: 'Interest', desc: 'KEYSTONE · Every 10 s you gain 1% of the coins you hold, up to 10 s of perfect income.' },
   Wb1: { name: 'Bulk Buy', desc: 'Hold Shift while buying an upgrade to buy as many levels as you can afford.' },
-  Wb2: { name: 'Auto-buyer', desc: 'Automatically buys the cheapest affordable upgrade.' + SOON },
+  Wb2: { name: 'Auto-buyer', desc: 'Automatically buys the cheapest affordable upgrade (up to 4 levels per second).' },
   Wb3: { name: 'Magnet Memory', desc: 'The field keeps working for 1 s after the cursor leaves the board.' },
-  Wb4: { name: 'Auto-pulse', desc: 'Pulse fires on its own when 5+ coins are in range.' + SOON },
+  Wb4: { name: 'Auto-pulse', desc: 'Pulse fires on its own when it is ready and 5+ coins are within its range.' },
   Wb5: { name: 'Homing Prisms', desc: 'Prism coins slowly steer toward your magnet from anywhere on the board.' },
-  Wb6: { name: 'Auto-shift', desc: 'Shift polarity automatically at a target you set.' + SOON },
-  Wkey: { name: 'Drones', desc: 'KEYSTONE · An autonomous magnet roams the board (+1 per level).' + SOON },
+  Wb6: { name: 'Auto-shift', desc: 'Shift polarity automatically at 1×, 2× or 4× the run goal (button in the shift bar, key A). Cores are banked for your next manual shift.' },
+  Wkey: { name: 'Drones', desc: 'KEYSTONE · An autonomous magnet chases coins around the board (+1 per level). Ignores anti-coins.' },
 };
 
 export const ELEMENT_TEXT: Record<Element, string> = { iron: 'Iron', cobalt: 'Cobalt', nickel: 'Nickel', neodymium: 'Neodymium' };
@@ -93,6 +92,7 @@ export const M = {
   level: (lv: number, max: number) => `Lv ${lv}/${max}`,
   panelButton: (n: string) => `◈ ${n}  [G]`,
   shieldPop: 'SHIELDED',
+  chainPop: 'CHAIN',
   meteor: { title: 'METEOR SHOWER', sub: 'A line of fast coins incoming!' },
 };
 
@@ -125,6 +125,7 @@ export const S = {
   pulseReady: 'PULSE  [SPACE]',
   pulseActive: 'PULSE ACTIVE',
   pulseCooldown: (s: number) => `PULSE  ${s}s`,
+  auto: 'AUTO',
   offline: (s: string) => `OFFLINE ${s}s`,
   combo: (n: string) => `COMBO ${n}`,
 
@@ -144,6 +145,13 @@ export const S = {
   treeButton: '◆ CORE TREE  [T]',
   shiftButton: 'SHIFT POLARITY  [P]',
   cores: (n: string) => `CORES: ${n}`,
+  autoShiftOff: 'AUTO OFF  [A]',
+  autoShiftOn: (mult: number) => `AUTO ×${mult}  [A]`,
+  autoShiftTip: (mult: number, at: string) =>
+    mult > 0 ? `Auto-shift at ${at} (${mult}× the goal). Cores are banked for your next manual shift. Click or A to change.`
+      : 'Auto-shift is off. Click or press A to shift automatically at 1×, 2× or 4× the goal.',
+  autoShiftDone: (n: string) => `AUTO-SHIFT #${n}`,
+  autoShiftDoneSub: (cores: string, banked: string) => `+${cores} ◆ banked · ${banked} ◆ to spend on your next manual shift`,
 
   treeTitle: 'POLARITY SHIFT',
   treePreview: 'CORE TREE · PREVIEW',
@@ -164,7 +172,6 @@ export const S = {
   nodeNext: (lv: string, max: string, cost: string) => `Lv ${lv}/${max} · next: ${cost} ◆`,
   nodePoor: ' (not enough Cores)',
   nodePreview: ' (spend after shifting)',
-  nodeSoon: 'COMING SOON',
 
   confirmTitle: 'SHIFT POLARITY?',
   confirmGain: (n: string) => `+${n} ◆ earned this run`,

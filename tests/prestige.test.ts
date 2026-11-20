@@ -41,7 +41,7 @@ describe('Polarity Shift', () => {
     expect(treeUnlocked(later)).toBe(true);
   });
 
-  it('reveals nodes next to owned ones and never sells "soon" nodes', () => {
+  it('reveals nodes next to owned ones', () => {
     const st = createState();
     st.totalEarned = 4_000_000;
     const draft = startDraft(st);
@@ -50,8 +50,18 @@ describe('Polarity Shift', () => {
     expect(buyNode(draft, NODE_BY_ID.Nb1!)).toBe(true);
     expect(nodeVisible(draft.nodes, NODE_BY_ID.Nb2!)).toBe(true);
     expect(nodeVisible(draft.nodes, NODE_BY_ID.Nb4!)).toBe(false);
+    expect(canBuyNode({ ...draft, cores: 999 }, NODE_BY_ID.Wb2!)).toBe(false); // hidden until Bulk Buy is owned
     draft.nodes.Wb1 = 1;
-    expect(canBuyNode({ ...draft, cores: 999 }, NODE_BY_ID.Wb2!)).toBe(false); // Auto-buyer – coming in M5
+    expect(canBuyNode({ ...draft, cores: 999 }, NODE_BY_ID.Wb2!)).toBe(true); // Auto-buyer (M5)
+  });
+
+  it('sells every node of the tree – no placeholders left', () => {
+    const draft = { nodes: {} as Record<string, number>, cores: 10_000, gained: 0 };
+    for (let changed = true; changed;) { // buy everything reachable until nothing changes
+      changed = false;
+      for (const n of NODES) while (buyNode(draft, n)) changed = true;
+    }
+    for (const n of NODES) if (n.id !== 'core') expect(draft.nodes[n.id], n.id).toBe(n.max);
   });
 
   it('keeps purchases tentative until the shift is committed', () => {
@@ -75,7 +85,7 @@ describe('Polarity Shift', () => {
     buyNode(draft, NODE_BY_ID.Sb1!);
     buyNode(draft, NODE_BY_ID.Sb2!);
     commitShift(st, draft);
-    expect(st.meta).toEqual({ cores: 5, coresEarned: 10, shifts: 1, nodes: { Sb1: 2, Sb2: 1 }, crystals: 3, lodestones: {}, pity: 0 });
+    expect(st.meta).toEqual({ cores: 5, coresEarned: 10, shifts: 1, nodes: { Sb1: 2, Sb2: 1 }, crystals: 3, lodestones: {}, pity: 0, autoShift: 0 });
     expect(st.money).toBe(500); // Head Start 1
     expect(st.totalEarned).toBe(0);
     expect(st.levels.value).toBe(0);
@@ -116,8 +126,10 @@ describe('save with Polarity Shift', () => {
   it('round-trips the meta progress', () => {
     const st = withNodes({ Nb1: 2, Sb1: 1 }, 20);
     st.meta.cores = 7; st.meta.shifts = 2;
-    st.meta.crystals = 42; st.meta.lodestones = { 'iron-epic': 2 }; st.meta.pity = 7;
-    expect(deserialize(serialize(st))!.meta).toEqual({ cores: 7, coresEarned: 20, shifts: 2, nodes: { Nb1: 2, Sb1: 1 }, crystals: 42, lodestones: { 'iron-epic': 2 }, pity: 7 });
+    st.meta.crystals = 42; st.meta.lodestones = { 'iron-epic': 2 }; st.meta.pity = 7; st.meta.autoShift = 2;
+    expect(deserialize(serialize(st))!.meta).toEqual({
+      cores: 7, coresEarned: 20, shifts: 2, nodes: { Nb1: 2, Sb1: 1 }, crystals: 42, lodestones: { 'iron-epic': 2 }, pity: 7, autoShift: 2,
+    });
   });
 
   it('migrates a version 1 save to an empty tree, and drops unknown or over-max nodes', () => {

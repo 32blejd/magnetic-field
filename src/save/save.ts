@@ -1,6 +1,6 @@
 import { GOALS } from '../data/goals';
 import { GACHA, LODESTONE_BY_ID } from '../data/lodestones';
-import { NODE_BY_ID } from '../data/prestige';
+import { AUTO_SHIFT_TARGETS, NODE_BY_ID } from '../data/prestige';
 import { EVENTS } from '../data/tuning';
 import { UPGRADES, UPGRADE_IDS, type UpgradeId } from '../data/upgrades';
 import { createState } from '../game/state';
@@ -58,6 +58,7 @@ function metaFromSave(m: SaveData['meta']): MetaState {
     crystals: Math.max(0, Math.floor(num(m?.crystals, 0))),
     lodestones,
     pity: Math.max(0, Math.floor(num(m?.pity, 0))),
+    autoShift: AUTO_SHIFT_TARGETS.includes(num(m?.autoShift, 0)) ? num(m?.autoShift, 0) : 0,
   };
 }
 
@@ -82,7 +83,7 @@ export function fromSave(data: SaveData): GameState {
   for (const g of GOALS) if (data.goalsDone?.[g.id] === true) st.goalsDone[g.id] = true;
   const s = data.stats ?? {};
   st.stats = {
-    caught: { basic: num(s.caught?.basic, 0), gold: num(s.caught?.gold, 0), prism: num(s.caught?.prism, 0) },
+    caught: { basic: num(s.caught?.basic, 0), gold: num(s.caught?.gold, 0), prism: num(s.caught?.prism, 0), void: num(s.caught?.void, 0) },
     missed: num(s.missed, 0),
     anti: num(s.anti, 0),
     bestCombo: num(s.bestCombo, 0),

@@ -2,7 +2,9 @@ import { readDebugOptions } from './debug';
 import { BOARD, STEP, VIEW } from './data/tuning';
 import { triggerPulse } from './game/abilities';
 import { magnetronUnlocked, pullMany } from './game/lodestones';
-import { bonuses, buyNode, canShift, commitShift, startDraft, treeUnlocked } from './game/prestige';
+import {
+  autoShiftDue, bonuses, buyNode, canShift, commitAutoShift, commitShift, nextAutoShiftTarget, startDraft, treeUnlocked,
+} from './game/prestige';
 import { buy, buyMax, canBuy } from './game/shop';
 import { step } from './game/simulation';
 import { createState } from './game/state';
@@ -11,14 +13,15 @@ import type { GameEvent, Vec } from './game/types';
 import { drawBoard } from './render/board';
 import { Effects } from './render/effects';
 import { drawPanel, drawTooltip } from './render/panel';
-import { drawPrestigeBar, prestigeButtonAction } from './render/prestigeBar';
+import { autoShiftVisible, drawPrestigeBar, prestigeButtonAction } from './render/prestigeBar';
 import { COLORS } from './render/theme';
 import { cellAt, drawMagnetron } from './render/magnetron';
 import { drawConfirm, drawShiftAnim, drawTree, nodeAt, treeButtons } from './render/tree';
 import { AUTOSAVE_INTERVAL, clearSave, loadGame, saveGame, type LoadResult } from './save/save';
 import { rowKey, setupInput } from './ui/input';
-import { MAGNETRON_BUTTON, PRESTIGE_BUTTON, buttonRect, inRect, visibleRows } from './ui/layout';
+import { AUTO_SHIFT_BUTTON, MAGNETRON_BUTTON, PRESTIGE_BUTTON, buttonRect, inRect, visibleRows } from './ui/layout';
 import { MAG_BACK, PULL1, PULL10, newMagnetronView, type MagnetronView } from './ui/magnetronLayout';
+import { formatNumber } from './ui/format';
 import { S } from './ui/strings';
 import { CONFIRM_BACK, CONFIRM_OK, newTreeView, zoomAt, type TreeMode, type TreeView } from './ui/treeLayout';
 
@@ -40,6 +43,7 @@ if (debug.cores) st.meta.cores = debug.cores;
 if (debug.crystals) st.meta.crystals = debug.crystals;
 if (debug.shifts) st.meta.shifts = debug.shifts;
 if (debug.pulls) { st.meta.crystals += debug.pulls * 10; pullMany(st, debug.pulls); }
+if (debug.nodes) st.meta.nodes = { ...st.meta.nodes, ...debug.nodes };
 const fx = new Effects();
 if (loaded.movedToBackup) fx.banner(S.saveUnreadable.title, S.saveUnreadable.sub, COLORS.red, 6);
 const events: GameEvent[] = [];
@@ -66,6 +70,21 @@ function tick(): void {
   step(st, STEP, magnet(), events);
   fx.handle(events, st);
   fx.update(STEP, st);
+  if (autoShiftDue(st)) autoShift();
+}
+
+/** Auto-shift: restart the run on the spot, banking this run's Cores (no tree screen, no pause). */
+function autoShift(): void {
+  const gained = commitAutoShift(st);
+  fx.reset();
+  fx.banner(S.autoShiftDone(formatNumber(st.meta.shifts)), S.autoShiftDoneSub(formatNumber(gained), formatNumber(st.meta.cores)), COLORS.green, 4);
+  lastBoardPos = null;
+  save();
+}
+function cycleAutoShift(): void {
+  if (!autoShiftVisible(st)) return;
+  st.meta.autoShift = nextAutoShiftTarget(st.meta.autoShift);
+  save();
 }
 for (let i = 0; i < debug.warm / STEP; i++) tick();
 
@@ -117,6 +136,7 @@ function updateCursorStyle(p: Vec): void {
   let pointer = false;
   if (screen === 'run') {
     pointer = (inRect(p, PRESTIGE_BUTTON) && prestigeButtonAction(st) !== null) || (inRect(p, MAGNETRON_BUTTON) && magnetronUnlocked(st)) ||
+      (inRect(p, AUTO_SHIFT_BUTTON) && autoShiftVisible(st)) ||
       visibleRows(st).some(({ def, locked }, i) => !locked && inRect(p, buttonRect(i)) && canBuy(st, def));
     canvas.style.cursor = inRect(p, BOARD) ? 'none' : pointer ? 'pointer' : 'default';
   } else if (screen === 'tree' && tree) {
@@ -152,6 +172,7 @@ setupInput(canvas, {
     if (screen === 'run') {
       if (inRect(p, PRESTIGE_BUTTON)) { pressPrestigeButton(); return; }
       if (inRect(p, MAGNETRON_BUTTON)) { openMagnetron(); return; }
+      if (inRect(p, AUTO_SHIFT_BUTTON) && autoShiftVisible(st)) { cycleAutoShift(); return; }
       visibleRows(st).forEach((_, i) => { if (inRect(p, buttonRect(i))) tryBuy(i, shift); });
     } else if (screen === 'tree' && tree) {
       const drag = tree.drag;
@@ -179,6 +200,7 @@ setupInput(canvas, {
       if (code === 'KeyT' && treeUnlocked(st)) openTree('browse');
       if (code === 'KeyP' && canShift(st)) openTree('shift');
       if (code === 'KeyG') openMagnetron();
+      if (code === 'KeyA') cycleAutoShift();
       const row = rowKey(code);
       if (row >= 0) tryBuy(row, shift);
       return false;

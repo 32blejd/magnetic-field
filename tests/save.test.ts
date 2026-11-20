@@ -21,7 +21,7 @@ function playedState() {
   st.unlocked.capacity = true;
   st.unlockOrder.push('strength', 'capacity');
   st.goalsDone['coins-10'] = true;
-  st.stats.caught = { basic: 40, gold: 4, prism: 1 };
+  st.stats.caught = { basic: 40, gold: 4, prism: 1, void: 2 };
   st.features.pulse = true;
   return st;
 }
@@ -35,7 +35,7 @@ describe('save', () => {
     expect(loaded.levels).toEqual(st.levels);
     expect(loaded.unlockOrder).toEqual(['value', 'range', 'spawn', 'strength', 'capacity']);
     expect(loaded.goalsDone).toEqual({ 'coins-10': true });
-    expect(loaded.stats.caught).toEqual({ basic: 40, gold: 4, prism: 1 });
+    expect(loaded.stats.caught).toEqual({ basic: 40, gold: 4, prism: 1, void: 2 });
     expect(loaded.features.pulse).toBe(true);
     expect(loaded.rng).toBe(st.rng);
   });
@@ -61,7 +61,7 @@ describe('save', () => {
     expect(loaded.money).toBe(50);
     expect(loaded.levels.range).toBe(2);
     expect(loaded.unlockOrder).toEqual(['value', 'range', 'spawn']);
-    expect(loaded.stats.caught).toEqual({ basic: 0, gold: 0, prism: 0 });
+    expect(loaded.stats.caught).toEqual({ basic: 0, gold: 0, prism: 0, void: 0 });
     expect(loaded.goalsDone).toEqual({});
   });
 

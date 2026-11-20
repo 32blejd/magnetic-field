@@ -48,3 +48,40 @@ export const EVENTS = {
 
 /** Earn this much in one run to unlock Polarity Shift. */
 export const PRESTIGE_GOAL = 1_000_000;
+
+/* ---------- M5: keystones and automation from the Core tree ---------- */
+
+/** Satellites (N keystone): small magnets orbiting the cursor, one per level. Sizes are fractions of the field radius without Pulse. */
+export const SATELLITES = {
+  /** Orbit radius (× field radius) – they ride the edge of the main field. */
+  orbit: 1,
+  /** Field radius of each satellite (× field radius). */
+  range: 0.4,
+  /** Orbit speed (rad/s). */
+  spin: 2.4,
+  /** Body radius (touch distance = radius + 60% of the coin radius). */
+  radius: 5,
+};
+
+/** Drones (W keystone): autonomous magnets that chase the nearest coin, one per level. */
+export const DRONES = {
+  /** Flight speed (px/s). */
+  speed: 140,
+  /** Field radius (× the main field radius without Pulse). */
+  range: 0.45,
+  radius: 7,
+};
+
+/** Chain Reaction (E): catching a Prism also collects every coin within this radius of it. */
+export const CHAIN = { radius: 80 };
+
+/** Interest (S keystone): every `every` s gain `rate` of held coins, at most `capSeconds` of perfect income. */
+export const INTEREST = { every: 10, rate: 0.01, capSeconds: 10 };
+
+/** Automation (W). */
+export const AUTO = {
+  /** Auto-pulse fires when at least this many coins are inside the Pulse radius. */
+  pulseCoins: 5,
+  /** Auto-buyer buys at most one level per this many seconds. */
+  buyEvery: 0.25,
+};

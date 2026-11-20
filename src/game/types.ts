@@ -66,6 +66,8 @@ export interface MetaState {
   lodestones: Record<string, number>;
   /** Pulls since the last Epic-or-better (pity counter). */
   pity: number;
+  /** Auto-shift target as a multiple of the run goal (0 = off); one of AUTO_SHIFT_TARGETS. */
+  autoShift: number;
 }
 
 export interface GameState {
@@ -101,6 +103,10 @@ export interface GameState {
   magnetSpeed: number;
   /** Combo Shield cooldown (s). */
   shieldCd: number;
+  /** Drone positions (Drones keystone). */
+  drones: Vec[];
+  /** Auto-buyer cooldown (s). */
+  autoBuyT: number;
 }
 
 /** Things that happened during a simulation step, consumed by effects/UI. */
@@ -115,4 +121,8 @@ export type GameEvent =
   | { type: 'goal'; goal: GoalDef; reward: number }
   | { type: 'meteor' }
   | { type: 'crystal'; amount: number; x: number; y: number }
-  | { type: 'shield'; x: number; y: number };
+  | { type: 'shield'; x: number; y: number }
+  | { type: 'chain'; x: number; y: number; radius: number }
+  | { type: 'interest'; amount: number }
+  | { type: 'autobuy'; id: UpgradeId }
+  | { type: 'autopulse'; x: number; y: number; range: number };

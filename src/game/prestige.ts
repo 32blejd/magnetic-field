@@ -1,6 +1,6 @@
 /* Polarity Shift: Cores, Core tree bonuses, tentative spending (draft) and the run reset. */
 import { CRYSTALS, ELEMENTS, GACHA, LODESTONES } from '../data/lodestones';
-import { NODE_BY_ID, NODES, PRESTIGE, parentsOf, type NodeDef } from '../data/prestige';
+import { AUTO_SHIFT_TARGETS, NODE_BY_ID, NODES, PRESTIGE, parentsOf, type NodeDef } from '../data/prestige';
 import { ANTI, COMBO, PULSE } from '../data/tuning';
 import { hasEarned } from './money';
 import { createState, emptyMeta } from './state';
@@ -44,6 +44,19 @@ export interface Bonuses {
   goalRewardMult: number;
   /** Extra chance for a Prism pickup to drop a Charge Crystal (Neodymium lodestones). */
   crystalFind: number;
+  /** Number of Satellites orbiting the cursor. */
+  satellites: number;
+  /** Catching a Prism also collects every coin within CHAIN.radius. */
+  chainReaction: boolean;
+  /** Adds the Void tier to coin rolls. */
+  voidCoin: boolean;
+  interest: boolean;
+  autoBuy: boolean;
+  autoPulse: boolean;
+  /** The Auto-shift node is owned (the target itself is a setting in meta.autoShift). */
+  autoShift: boolean;
+  /** Number of Drones roaming the board. */
+  drones: number;
 }
 
 const HEAD_START = [0, 500, 5000, 50000];
@@ -77,7 +90,8 @@ export function bonuses(meta: MetaState): Bonuses {
     comboMax: COMBO.max, comboShield: false, stunTime: ANTI.stun, rareChance: 0, prismValue: 3, eventRateMult: 1,
     meteorShower: false, goldenFountain: false, valueMult: 1 + PRESTIGE.coreValuePerCore * meta.coresEarned, headStart: 0,
     costMult: 1, unlockMult: 1, compound: false, coreYieldMult: 1, bulkBuy: false, magnetMemory: false, homingPrisms: false,
-    goalRewardMult: 1, crystalFind: 0,
+    goalRewardMult: 1, crystalFind: 0, satellites: 0, chainReaction: false, voidCoin: false, interest: false, autoBuy: false,
+    autoPulse: false, autoShift: false, drones: 0,
   };
   for (const def of NODES) {
     const lv = meta.nodes[def.id] ?? 0;
@@ -103,7 +117,15 @@ export function bonuses(meta: MetaState): Bonuses {
       case 'bulkBuy': b.bulkBuy = true; break;
       case 'magnetMemory': b.magnetMemory = true; break;
       case 'homingPrisms': b.homingPrisms = true; break;
-      case 'core': case 'soon': break;
+      case 'satellites': b.satellites = lv; break;
+      case 'chainReaction': b.chainReaction = true; break;
+      case 'voidCoin': b.voidCoin = true; break;
+      case 'interest': b.interest = true; break;
+      case 'autoBuy': b.autoBuy = true; break;
+      case 'autoPulse': b.autoPulse = true; break;
+      case 'autoShift': b.autoShift = true; break;
+      case 'drones': b.drones = lv; break;
+      case 'core': break;
     }
   }
   applyLodestones(meta, b);
@@ -152,7 +174,7 @@ export const nodeVisible = (nodes: Record<string, number>, def: NodeDef): boolea
 export const nodeCost = (nodes: Record<string, number>, def: NodeDef): number => def.cost[nodeLevel(nodes, def.id)] ?? Infinity;
 
 export function canBuyNode(draft: Draft, def: NodeDef): boolean {
-  return def.effect !== 'soon' && def.id !== 'core' && nodeVisible(draft.nodes, def) &&
+  return def.id !== 'core' && nodeVisible(draft.nodes, def) &&
     !nodeMaxed(draft.nodes, def) && draft.cores >= nodeCost(draft.nodes, def);
 }
 
@@ -180,6 +202,34 @@ export function commitShift(st: GameState, draft: Draft): void {
     crystals: st.meta.crystals + CRYSTALS.perShift,
     lodestones: { ...st.meta.lodestones },
     pity: st.meta.pity,
+    autoShift: st.meta.autoShift,
   };
   Object.assign(st, createState(st.rng, meta, bonuses(meta).headStart));
+}
+
+/* ---------- Auto-shift ---------- */
+
+/** Earned this run at which Auto-shift fires, or null when it's off (or the node isn't owned). */
+export function autoShiftAt(st: GameState): number | null {
+  if (!bonuses(st.meta).autoShift || st.meta.autoShift <= 0) return null;
+  return shiftGoal(st.meta) * st.meta.autoShift;
+}
+
+/** Auto-shift is on and its target has been earned this run. */
+export function autoShiftDue(st: GameState): boolean {
+  const at = autoShiftAt(st);
+  return at !== null && canShift(st) && hasEarned(st, at);
+}
+
+/** Shifts without buying anything – this run's Cores are banked for the next manual shift. Returns the Cores gained. */
+export function commitAutoShift(st: GameState): number {
+  const draft = startDraft(st);
+  commitShift(st, draft);
+  return draft.gained;
+}
+
+/** Next Auto-shift setting: off → ×1 → ×2 → ×4 → off. */
+export function nextAutoShiftTarget(current: number): number {
+  const i = AUTO_SHIFT_TARGETS.indexOf(current);
+  return AUTO_SHIFT_TARGETS[(i + 1) % AUTO_SHIFT_TARGETS.length]!;
 }

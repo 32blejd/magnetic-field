@@ -1,4 +1,5 @@
 import { GOALS, type GoalDef, type GoalMetric } from '../data/goals';
+import { GOOD_TIERS } from '../data/tiers';
 import { CRYSTALS } from '../data/lodestones';
 import { BOARD } from '../data/tuning';
 import { earn, goalReward } from './money';
@@ -9,7 +10,7 @@ import type { GameEvent, GameState } from './types';
 export function goalProgress(st: GameState, metric: GoalMetric): number {
   const c = st.stats.caught;
   switch (metric) {
-    case 'coins': return c.basic + c.gold + c.prism;
+    case 'coins': return GOOD_TIERS.reduce((n, t) => n + c[t], 0);
     case 'gold': return c.gold;
     case 'prism': return c.prism;
     case 'anti': return st.stats.anti;

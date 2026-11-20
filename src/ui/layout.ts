@@ -10,6 +10,8 @@ export const inRect = (p: Vec, r: Rect): boolean => p.x >= r.x && p.x <= r.x + r
 export const PRESTIGE_BAR: Rect = { x: 16, y: 472, w: 700, h: 52 };
 /** Right-hand button of the prestige bar: Core tree preview, or Shift Polarity once 1M is earned. */
 export const PRESTIGE_BUTTON: Rect = { x: PRESTIGE_BAR.x + PRESTIGE_BAR.w - 186, y: PRESTIGE_BAR.y + 12, w: 170, h: 28 };
+/** Auto-shift toggle – left of the prestige button (once the Auto-shift node is owned). */
+export const AUTO_SHIFT_BUTTON: Rect = { x: PRESTIGE_BUTTON.x - 100, y: PRESTIGE_BUTTON.y, w: 92, h: 28 };
 /** Upgrade panel – right side, full height. */
 export const PANEL: Rect = { x: 732, y: 16, w: 212, h: 508 };
 /** Magnetron button – panel header, right of the UPGRADES label (after the first shift). */

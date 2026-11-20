@@ -29,6 +29,9 @@ export function earn(st: GameState, amount: number): void {
 export const goalReward = (perCoin: number, spawnPerSecond: number, seconds: number): number =>
   Math.round(perCoin * spawnPerSecond * seconds);
 
+/** Interest payout: `rate` of the held coins, but never more than `cap`. */
+export const interestOn = (held: number, rate: number, cap: number): number => Math.max(0, Math.min(held * rate, cap));
+
 /** Value of one collected coin. */
 export const coinValue = (perCoin: number, tierMult: number, comboMultiplier: number): number => perCoin * tierMult * comboMultiplier;
 

@@ -1,6 +1,7 @@
 import { VIEW } from '../data/tuning';
 import { upgradeUnlockAt } from '../game/abilities';
 import { magnetronUnlocked } from '../game/lodestones';
+import { bonuses } from '../game/prestige';
 import { canBuy, isMaxed, nextCost } from '../game/shop';
 import type { GameState, Vec } from '../game/types';
 import { formatNumber, formatShort, formatUpgradeValue } from '../ui/format';
@@ -24,11 +25,16 @@ export function drawPanel(ctx: Ctx, st: GameState, fx: Effects, cursor: Vec | nu
   fx.goalPops.forEach((g, i) => { // mini-goal payout rising from the wallet
     const k = 1 - g.life / 1.6;
     ctx.globalAlpha = Math.min(1, g.life / 0.4);
-    glow(ctx, COLORS.amber, 12); ctx.fillStyle = COLORS.amber; ctx.font = `700 15px ${FONT}`; ctx.textAlign = 'right';
+    const col = g.color ?? COLORS.amber;
+    glow(ctx, col, 12); ctx.fillStyle = col; ctx.font = `700 15px ${FONT}`; ctx.textAlign = 'right';
     ctx.fillText(g.text, P.x + P.w - 14, P.y + 34 - k * 22 - i * 16); noGlow(ctx);
     ctx.textAlign = 'left'; ctx.globalAlpha = 1;
   });
   ctx.fillStyle = COLORS.magenta; ctx.font = `700 11px ${FONT}`; ctx.fillText(S.upgradesTitle, P.x + 16, P.y + 82);
+  if (bonuses(st.meta).autoBuy) { // Auto-buyer tag next to the title
+    const x = P.x + 22 + ctx.measureText(S.upgradesTitle).width;
+    ctx.fillStyle = COLORS.green; ctx.font = `700 9px ${FONT}`; ctx.fillText(S.auto, x, P.y + 82);
+  }
   if (magnetronUnlocked(st)) { // Magnetron button with the crystal count
     const b = MAGNETRON_BUTTON, hover = cursor !== null && inRect(cursor, b);
     glow(ctx, COLORS.core, hover ? 14 : 6); ctx.fillStyle = COLORS.core + (hover ? '40' : '18');

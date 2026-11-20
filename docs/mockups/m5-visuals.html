@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>M5 Visuals – Mockup</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #04050c; color: #e6fbff; font: 13px Consolas, "Courier New", monospace; }
+  body { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; }
+  nav { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+  nav span { color: #5f9bb3; align-self: center; margin: 0 4px 0 10px; }
+  nav button { background: #080c1e; color: #5f9bb3; border: 1px solid rgba(0,229,255,.35); border-radius: 6px; padding: 6px 12px; font: inherit; cursor: pointer; }
+  nav button.on { color: #00f0ff; border-color: #00f0ff; box-shadow: 0 0 10px rgba(0,240,255,.4); }
+  canvas { display: block; width: min(100vw, calc((100vh - 60px) * 16 / 9)); aspect-ratio: 16 / 9; }
+</style>
+</head>
+<body>
+<nav>
+  <span>Satellites</span><button data-k="sat" data-v="A">A · rings</button><button data-k="sat" data-v="B" class="on">B · tethered (in game)</button>
+  <span>Drones</span><button data-k="drone" data-v="A">A · hexes</button><button data-k="drone" data-v="B" class="on">B · ships (in game)</button>
+  <span>Void</span><button data-k="void" data-v="A">A · hex rim</button><button data-k="void" data-v="B" class="on">B · black hole (in game)</button>
+</nav>
+<canvas id="c"></canvas>
+<script>
+/* Look-and-feel mockup only (M5): Satellites, Drones, the Void coin and the Auto-shift toggle. B was chosen and is what the game
+   draws (src/render/board.ts, prestigeBar.ts); A is the first version, kept for comparison. Numbers here are illustrative only. */
+const W = 960, H = 540, FONT = 'Consolas, "Courier New", monospace';
+const C = { bg: '#04050c', board: '#070a1a', panel: '#080c1e', cyan: '#00f0ff', magenta: '#ff2bd6', amber: '#ffc21a', red: '#ff3355',
+  text: '#e6fbff', sub: '#5f9bb3', green: '#4dff9a', core: '#b98cff', void: '#9d4dff' };
+const B = { x: 16, y: 16, w: 700, h: 446 };
+const cv = document.getElementById('c'), dpr = Math.max(2, devicePixelRatio || 1);
+cv.width = W * dpr; cv.height = H * dpr;
+const ctx = cv.getContext('2d'); ctx.scale(dpr, dpr);
+const pick = { sat: 'B', drone: 'B', void: 'B' };
+document.querySelectorAll('nav button').forEach(b => b.onclick = () => {
+  pick[b.dataset.k] = b.dataset.v;
+  document.querySelectorAll(`nav button[data-k="${b.dataset.k}"]`).forEach(x => x.classList.toggle('on', x === b));
+});
+if (new URLSearchParams(location.search).get('v') === 'A') { // ?v=A shows every first version at once
+  for (const k in pick) pick[k] = 'A';
+  document.querySelectorAll('nav button').forEach(x => x.classList.toggle('on', x.dataset.v === 'A'));
+}
+const glow = (c, b) => { ctx.shadowColor = c; ctx.shadowBlur = b; }, noGlow = () => { ctx.shadowBlur = 0; };
+const hex = (x, y, r, rot) => { ctx.beginPath(); for (let i = 0; i < 6; i++) { const a = rot + i * Math.PI / 3; ctx[i ? 'lineTo' : 'moveTo'](x + Math.cos(a) * r, y + Math.sin(a) * r); } ctx.closePath(); };
+const circle = (x, y, r) => { ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); };
+const label = (text, x, y, col = C.sub, align = 'center') => { ctx.fillStyle = col; ctx.font = `10px ${FONT}`; ctx.textAlign = align; ctx.fillText(text, x, y); ctx.textAlign = 'left'; };
+
+function basicCoin(x, y, t) {
+  glow(C.cyan, 12); ctx.strokeStyle = C.cyan; ctx.lineWidth = 1.6; ctx.fillStyle = 'rgba(0,240,255,.12)';
+  hex(x, y, 11.88, t * 0.8); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#bff9ff'; circle(x, y, 2.2); ctx.fill(); noGlow();
+}
+
+/* ---------- main magnet + Satellites ---------- */
+function magnet(m, range, t) {
+  ctx.strokeStyle = 'rgba(255,43,214,.35)'; ctx.lineWidth = 1;
+  for (let i = 0; i < 3; i++) { const r = (t * 30 + i * range / 3) % range; ctx.globalAlpha = 1 - r / range; circle(m.x, m.y, r); ctx.stroke(); }
+  ctx.globalAlpha = 1; glow(C.magenta, 10);
+  ctx.setLineDash([6, 6]); ctx.lineDashOffset = -t * 20; ctx.strokeStyle = 'rgba(255,43,214,.6)'; circle(m.x, m.y, range); ctx.stroke(); ctx.setLineDash([]);
+  ctx.lineWidth = 2.5; ctx.strokeStyle = C.magenta; circle(m.x, m.y, 10); ctx.stroke(); ctx.fillStyle = '#ffd0f5'; circle(m.x, m.y, 3); ctx.fill(); noGlow();
+}
+function satellites(m, range, n, t) {
+  const fr = range * 0.4;
+  for (let k = 0; k < n; k++) {
+    const a = t * 2.4 + k * Math.PI * 2 / n, x = m.x + Math.cos(a) * range, y = m.y + Math.sin(a) * range;
+    if (pick.sat === 'A') {
+      ctx.strokeStyle = 'rgba(255,43,214,.28)'; ctx.lineWidth = 1; ctx.setLineDash([3, 4]); circle(x, y, fr); ctx.stroke(); ctx.setLineDash([]);
+      glow(C.magenta, 10); ctx.strokeStyle = C.magenta; ctx.lineWidth = 2; circle(x, y, 5); ctx.stroke();
+      ctx.fillStyle = '#ffd0f5'; circle(x, y, 1.8); ctx.fill(); noGlow();
+    } else { // tethered: a faint beam to the magnet, soft filled field, small hex body
+      ctx.strokeStyle = 'rgba(255,43,214,.22)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(m.x, m.y); ctx.lineTo(x, y); ctx.stroke();
+      const g = ctx.createRadialGradient(x, y, 0, x, y, fr); g.addColorStop(0, 'rgba(255,43,214,.16)'); g.addColorStop(1, 'rgba(255,43,214,0)');
+      ctx.fillStyle = g; circle(x, y, fr); ctx.fill();
+      glow(C.magenta, 12); ctx.fillStyle = 'rgba(255,43,214,.25)'; ctx.strokeStyle = C.magenta; ctx.lineWidth = 1.8;
+      hex(x, y, 6, -a); ctx.fill(); ctx.stroke(); noGlow();
+    }
+  }
+}
+
+/* ---------- Drones ---------- */
+function drone(p, dir, range, t, k) {
+  if (pick.drone === 'A') {
+    ctx.strokeStyle = 'rgba(77,255,154,.22)'; ctx.lineWidth = 1; ctx.setLineDash([4, 5]); ctx.lineDashOffset = -t * 15; circle(p.x, p.y, range); ctx.stroke(); ctx.setLineDash([]);
+    glow(C.green, 12); ctx.strokeStyle = C.green; ctx.lineWidth = 2; ctx.fillStyle = 'rgba(77,255,154,.14)';
+    hex(p.x, p.y, 7, t * 3 + k); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#d6ffe8'; circle(p.x, p.y, 2); ctx.fill(); noGlow();
+  } else { // ship: triangle pointing where it flies, thruster trail, field only as a faint ring
+    ctx.strokeStyle = 'rgba(77,255,154,.12)'; ctx.lineWidth = 1; circle(p.x, p.y, range); ctx.stroke();
+    for (let i = 1; i <= 6; i++) { ctx.globalAlpha = 0.5 * (1 - i / 7); ctx.fillStyle = C.green; circle(p.x - Math.cos(dir) * i * 4, p.y - Math.sin(dir) * i * 4, 3 - i * 0.35); ctx.fill(); }
+    ctx.globalAlpha = 1; glow(C.green, 12); ctx.fillStyle = 'rgba(77,255,154,.2)'; ctx.strokeStyle = C.green; ctx.lineWidth = 1.8;
+    ctx.beginPath();
+    ctx.moveTo(p.x + Math.cos(dir) * 10, p.y + Math.sin(dir) * 10);
+    ctx.lineTo(p.x + Math.cos(dir + 2.5) * 7, p.y + Math.sin(dir + 2.5) * 7);
+    ctx.lineTo(p.x + Math.cos(dir - 2.5) * 7, p.y + Math.sin(dir - 2.5) * 7);
+    ctx.closePath(); ctx.fill(); ctx.stroke(); noGlow();
+  }
+}
+
+/* ---------- Void coin ---------- */
+function voidCoin(x, y, t, phase = 0) {
+  const r = 11.88 * 1.3;
+  if (pick.void === 'A') {
+    const pulse = 1 + 0.06 * Math.sin(t * 6 + phase), a = t * 4 + phase;
+    glow(C.void, 24); ctx.fillStyle = '#07000f'; ctx.strokeStyle = C.void; ctx.lineWidth = 2.2;
+    hex(x, y, r * pulse, -t * 1.5 + phase); ctx.fill(); ctx.stroke();
+    ctx.lineWidth = 1.4; ctx.strokeStyle = 'rgba(200,160,255,.85)'; ctx.beginPath(); ctx.arc(x, y, r * 0.58, a, a + Math.PI * 1.25); ctx.stroke();
+    noGlow(); ctx.fillStyle = '#000'; circle(x, y, r * 0.28); ctx.fill();
+  } else { // black hole: dark disc, two accretion arcs, a thin event-horizon ring
+    glow(C.void, 26); ctx.fillStyle = '#000'; circle(x, y, r * 0.7); ctx.fill(); noGlow();
+    for (let i = 0; i < 2; i++) {
+      const a = t * (3 + i) + phase + i * Math.PI;
+      ctx.strokeStyle = i ? 'rgba(255,120,240,.7)' : 'rgba(157,77,255,.95)'; ctx.lineWidth = 2.4 - i;
+      glow(C.void, 14); ctx.beginPath(); ctx.ellipse(x, y, r * 1.05, r * 0.55, a * 0.2, a, a + Math.PI * 1.1); ctx.stroke(); noGlow();
+    }
+    ctx.strokeStyle = 'rgba(200,160,255,.9)'; ctx.lineWidth = 1; circle(x, y, r * 0.72); ctx.stroke();
+  }
+}
+
+/* ---------- prestige bar with the Auto-shift toggle ---------- */
+function bar(t) {
+  const R = { x: 16, y: 472, w: 700, h: 52 }, states = [0, 1, 2, 4], s = states[Math.floor(t / 1.6) % 4];
+  ctx.fillStyle = C.panel; ctx.beginPath(); ctx.roundRect(R.x, R.y, R.w, R.h, 10); ctx.fill();
+  ctx.strokeStyle = 'rgba(0,229,255,.35)'; ctx.setLineDash([5, 5]); ctx.stroke(); ctx.setLineDash([]);
+  ctx.textBaseline = 'middle'; ctx.fillStyle = C.magenta; ctx.font = `700 11px ${FONT}`; ctx.fillText('POLARITY SHIFT', R.x + 16, R.y + 18);
+  ctx.fillStyle = C.sub; ctx.font = `11px ${FONT}`; ctx.fillText('Earn 5.50M this run · 3.82M', R.x + 16, R.y + 35);
+  const bx = R.x + 230, ab = { x: 430, y: 484, w: 92, h: 28 }, bw = ab.x - 12 - bx;
+  ctx.fillStyle = 'rgba(0,229,255,.08)'; ctx.beginPath(); ctx.roundRect(bx, R.y + 22, bw, 8, 4); ctx.fill();
+  glow(C.magenta, 8); ctx.fillStyle = C.magenta; ctx.beginPath(); ctx.roundRect(bx, R.y + 22, bw * 0.69, 8, 4); ctx.fill(); noGlow();
+  const on = s > 0;
+  if (on) glow(C.green, 8);
+  ctx.fillStyle = on ? C.green + '1c' : 'rgba(8,12,30,.8)'; ctx.beginPath(); ctx.roundRect(ab.x, ab.y, ab.w, ab.h, 7); ctx.fill();
+  ctx.strokeStyle = on ? C.green : C.sub; ctx.lineWidth = 1.2; ctx.stroke(); noGlow();
+  ctx.fillStyle = on ? C.green : C.sub; ctx.font = `700 10px ${FONT}`; ctx.textAlign = 'center';
+  ctx.fillText(on ? `AUTO ×${s}  [A]` : 'AUTO OFF  [A]', ab.x + ab.w / 2, ab.y + ab.h / 2 + 1);
+  const pb = { x: 530, y: 484, w: 170, h: 28 };
+  glow(C.core, 6); ctx.fillStyle = C.core + '14'; ctx.beginPath(); ctx.roundRect(pb.x, pb.y, pb.w, pb.h, 7); ctx.fill();
+  ctx.strokeStyle = C.core; ctx.stroke(); noGlow(); ctx.fillStyle = C.core; ctx.font = `700 11px ${FONT}`;
+  ctx.fillText('◆ CORE TREE  [T]', pb.x + pb.w / 2, pb.y + pb.h / 2 + 1); ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+  return s;
+}
+
+/* ---------- right column: notes ---------- */
+function notes(s) {
+  const x = 732, y = 16, w = 212;
+  ctx.fillStyle = C.panel; ctx.beginPath(); ctx.roundRect(x, y, w, 508, 10); ctx.fill(); ctx.strokeStyle = 'rgba(0,229,255,.5)'; ctx.stroke();
+  const lines = [
+    [C.magenta, 'SATELLITES  (N keystone)'], [C.text, 'orbit on the field edge,'], [C.text, 'own small field, +1 / lv'], [C.sub, ''],
+    [C.green, 'DRONES  (W keystone)'], [C.text, 'chase the nearest coin,'], [C.text, 'work with no cursor, +1 / lv'], [C.sub, ''],
+    [C.void, 'VOID COIN  (E keystone)'], [C.text, '×10 value · 0.3% · drifts ×1.5'], [C.sub, ''],
+    [C.green, 'AUTO-SHIFT  (W)'], [C.text, 'OFF → ×1 → ×2 → ×4 the goal'], [C.text, 'Cores banked for the next'], [C.text, 'manual shift'], [C.sub, ''],
+    [C.green, 'AUTO TAGS'], [C.text, 'UPGRADES AUTO = Auto-buyer'], [C.text, 'PULSE … AUTO = Auto-pulse'], [C.sub, ''],
+    [C.sub, `sat ${pick.sat} · drone ${pick.drone} · void ${pick.void}`], [C.sub, `toggle: ${s ? '×' + s : 'OFF'}`],
+  ];
+  ctx.font = `11px ${FONT}`;
+  lines.forEach(([col, text], i) => { ctx.fillStyle = col; ctx.font = `${col === C.text || col === C.sub ? '' : '700 '}11px ${FONT}`; ctx.fillText(text, x + 14, y + 28 + i * 17); });
+}
+
+function frame(ms) {
+  const t = ms / 1000;
+  ctx.fillStyle = C.bg; ctx.fillRect(0, 0, W, H);
+  ctx.save(); ctx.beginPath(); ctx.roundRect(B.x, B.y, B.w, B.h, 10); ctx.clip();
+  ctx.fillStyle = C.board; ctx.fillRect(B.x, B.y, B.w, B.h);
+  ctx.strokeStyle = 'rgba(0,240,255,.07)'; ctx.lineWidth = 1; ctx.beginPath();
+  for (let x = B.x; x < B.x + B.w; x += 28) { ctx.moveTo(x + 0.5, B.y); ctx.lineTo(x + 0.5, B.y + B.h); }
+  for (let y = B.y; y < B.y + B.h; y += 28) { ctx.moveTo(B.x, y + 0.5); ctx.lineTo(B.x + B.w, y + 0.5); }
+  ctx.stroke();
+
+  // scene 1: magnet with 3 satellites (late-game field)
+  const m = { x: 200 + Math.cos(t * 0.6) * 20, y: 200 + Math.sin(t * 0.8) * 14 }, range = 90;
+  basicCoin(m.x + 140, m.y + 30, t); basicCoin(m.x - 40, m.y - 125, t);
+  satellites(m, range, 3, t); magnet(m, range, t);
+  label('main magnet + 3 Satellites', 200, 330);
+
+  // scene 2: three drones chasing coins on the right half
+  const targets = [{ x: 560, y: 110 }, { x: 610, y: 300 }, { x: 470, y: 380 }];
+  targets.forEach((c, k) => {
+    basicCoin(c.x, c.y, t);
+    const a = t * 0.9 + k * 2.1, d = 46 + 18 * Math.sin(t * 1.3 + k);
+    const p = { x: c.x + Math.cos(a) * d, y: c.y + Math.sin(a) * d };
+    drone(p, Math.atan2(c.y - p.y, c.x - p.x), 40, t, k);
+  });
+  label('Drones (field 45% of the main field)', 560, 445);
+
+  // scene 3: Void coins next to Gold and Prism for scale
+  voidCoin(330, 395, t, 0); voidCoin(392, 70, t, 2);
+  label('Void ×10', 330, 425); label('Void', 392, 100);
+
+  // Pulse widget with the AUTO tag
+  ctx.fillStyle = 'rgba(8,12,30,.85)'; ctx.beginPath(); ctx.roundRect(28, B.y + B.h - 34, 150, 22, 6); ctx.fill();
+  glow(C.magenta, 8); ctx.strokeStyle = C.magenta; ctx.stroke(); noGlow();
+  ctx.textBaseline = 'middle'; ctx.fillStyle = C.magenta; ctx.font = `700 10px ${FONT}`; ctx.fillText('PULSE  [SPACE]', 38, B.y + B.h - 23);
+  ctx.fillStyle = C.green; ctx.font = `700 9px ${FONT}`; ctx.textAlign = 'right'; ctx.fillText('AUTO', 170, B.y + B.h - 23);
+  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+  ctx.restore();
+  glow(C.cyan, 12); ctx.strokeStyle = C.cyan; ctx.lineWidth = 1; ctx.beginPath(); ctx.roundRect(B.x + 0.5, B.y + 0.5, B.w - 1, B.h - 1, 10); ctx.stroke(); noGlow();
+
+  notes(bar(t));
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

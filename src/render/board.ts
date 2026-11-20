@@ -1,5 +1,6 @@
-import { ANTI, BOARD, COIN_RADIUS, MAGNET_RADIUS, SPAWN_TIME } from '../data/tuning';
+import { ANTI, BOARD, COIN_RADIUS, DRONES, MAGNET_RADIUS, SATELLITES, SPAWN_TIME } from '../data/tuning';
 import { comboMult } from '../game/abilities';
+import { satellitePositions } from '../game/helpers';
 import { bonuses } from '../game/prestige';
 import type { Stats } from '../game/stats';
 import type { AntiWarning, Coin, GameState, Vec } from '../game/types';
@@ -60,6 +61,20 @@ export function drawCoin(ctx: Ctx, c: Coin, scale: number, t: number): void {
     hexPath(ctx, c.x, c.y, COIN_RADIUS * scale, t * 0.8 + c.phase); ctx.fill(); ctx.stroke();
     ctx.fillStyle = '#bff9ff'; ctx.beginPath(); ctx.arc(c.x, c.y, 2.2 * scale, 0, Math.PI * 2); ctx.fill();
     noGlow(ctx);
+    return;
+  }
+  if (c.tier === 'void') { // black hole: dark disc, two spinning accretion arcs, a thin event-horizon ring
+    const r = COIN_RADIUS * 1.3 * scale;
+    glow(ctx, COLORS.void, 26); ctx.fillStyle = '#000';
+    ctx.beginPath(); ctx.arc(c.x, c.y, r * 0.7, 0, Math.PI * 2); ctx.fill(); noGlow(ctx);
+    for (let i = 0; i < 2; i++) {
+      const a = t * (3 + i) + c.phase + i * Math.PI;
+      ctx.strokeStyle = i ? 'rgba(255,120,240,.7)' : 'rgba(157,77,255,.95)'; ctx.lineWidth = 2.4 - i;
+      glow(ctx, COLORS.void, 14);
+      ctx.beginPath(); ctx.ellipse(c.x, c.y, r * 1.05, r * 0.55, a * 0.2, a, a + Math.PI * 1.1); ctx.stroke(); noGlow(ctx);
+    }
+    ctx.strokeStyle = 'rgba(200,160,255,.9)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.arc(c.x, c.y, r * 0.72, 0, Math.PI * 2); ctx.stroke();
     return;
   }
   const col = tierColor(c.tier, t, c.phase), prism = c.tier === 'prism';
@@ -140,6 +155,43 @@ function drawEffects(ctx: Ctx, st: GameState, fx: Effects): void {
   ctx.globalAlpha = 1;
 }
 
+/** Satellites: small magenta hexes tethered to the magnet by a faint beam, each with a soft glowing field. */
+function drawSatellites(ctx: Ctx, st: GameState, m: Vec, baseRange: number, count: number): void {
+  const range = baseRange * SATELLITES.range;
+  for (const p of satellitePositions(st, m, baseRange, count)) {
+    ctx.strokeStyle = 'rgba(255,43,214,.22)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(m.x, m.y); ctx.lineTo(p.x, p.y); ctx.stroke();
+    const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, range);
+    g.addColorStop(0, 'rgba(255,43,214,.16)'); g.addColorStop(1, 'rgba(255,43,214,0)');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(p.x, p.y, range, 0, Math.PI * 2); ctx.fill();
+    glow(ctx, COLORS.magenta, 12); ctx.fillStyle = 'rgba(255,43,214,.25)'; ctx.strokeStyle = COLORS.magenta; ctx.lineWidth = 1.8;
+    hexPath(ctx, p.x, p.y, SATELLITES.radius + 1, -Math.atan2(p.y - m.y, p.x - m.x)); ctx.fill(); ctx.stroke(); noGlow(ctx);
+  }
+}
+
+/** Drones: small green ships pointing where they fly, with a thruster trail and a faint field ring. */
+function drawDrones(ctx: Ctx, st: GameState, fx: Effects, baseRange: number): void {
+  const range = baseRange * DRONES.range;
+  for (const d of st.drones) {
+    const { trail, dir } = fx.droneLook(d);
+    ctx.strokeStyle = 'rgba(77,255,154,.12)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.arc(d.x, d.y, range, 0, Math.PI * 2); ctx.stroke();
+    ctx.fillStyle = COLORS.green;
+    trail.forEach((p, i) => { // older points are smaller and fainter
+      const k = (i + 1) / trail.length;
+      ctx.globalAlpha = 0.45 * k; ctx.beginPath(); ctx.arc(p.x, p.y, 0.8 + 2 * k, 0, Math.PI * 2); ctx.fill();
+    });
+    ctx.globalAlpha = 1;
+    glow(ctx, COLORS.green, 12); ctx.fillStyle = 'rgba(77,255,154,.2)'; ctx.strokeStyle = COLORS.green; ctx.lineWidth = 1.8;
+    const r = DRONES.radius;
+    ctx.beginPath();
+    ctx.moveTo(d.x + Math.cos(dir) * (r + 3), d.y + Math.sin(dir) * (r + 3));
+    ctx.lineTo(d.x + Math.cos(dir + 2.5) * r, d.y + Math.sin(dir + 2.5) * r);
+    ctx.lineTo(d.x + Math.cos(dir - 2.5) * r, d.y + Math.sin(dir - 2.5) * r);
+    ctx.closePath(); ctx.fill(); ctx.stroke(); noGlow(ctx);
+  }
+}
+
 function drawMagnet(ctx: Ctx, st: GameState, m: Vec, range: number): void {
   const t = st.t;
   if (st.stunT > 0) { // short-circuited: flickering red core, no field
@@ -210,6 +262,8 @@ export function drawBoard(ctx: Ctx, st: GameState, fx: Effects, magnet: Vec | nu
   drawCoins(ctx, st, fx);
   for (const w of st.warnings) drawWarning(ctx, w, st.t);
   drawEffects(ctx, st, fx);
+  drawDrones(ctx, st, fx, stats.baseRange);
+  if (magnet && st.stunT <= 0) drawSatellites(ctx, st, magnet, stats.baseRange, bonuses(st.meta).satellites);
   if (magnet) drawMagnet(ctx, st, magnet, stats.range);
   drawFloats(ctx, st, fx);
   drawHud(ctx, st);
