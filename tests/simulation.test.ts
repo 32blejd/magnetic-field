@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { ANTI, BOARD, PULSE, SPAWN_TIME, STEP } from '../src/data/tuning';
 import { UPGRADE_BY_ID } from '../src/data/upgrades';
 import { comboMult, triggerPulse } from '../src/game/abilities';
-import { buy } from '../src/game/money';
+import { buy } from '../src/game/shop';
 import { step } from '../src/game/simulation';
 import { createState } from '../src/game/state';
 import type { Coin, GameEvent, GameState } from '../src/game/types';
@@ -63,7 +63,7 @@ describe('simulation', () => {
     step(st, STEP, center);
     expect(st.stunT).toBeGreaterThan(1);
     expect(st.combo).toBe(0);
-    expect(st.money).toBe(0);
+    expect(st.money).toBe(20); // no coin value – only the reward of the "Catch 1 anti-coin" goal (20 s × 1 × 1/s)
     // while stunned, a good coin at the magnet is not collected
     st.coins.push(coin());
     step(st, STEP, center);

@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Compass Rose – Endgame Mockup</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #04050c; color: #e6fbff; font: 13px Consolas, "Courier New", monospace; }
+  body { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; }
+  nav { display: flex; gap: 8px; }
+  nav button { background: #080c1e; color: #5f9bb3; border: 1px solid rgba(0,229,255,.35); border-radius: 6px; padding: 6px 12px; font: inherit; cursor: pointer; }
+  nav button.on { color: #00f0ff; border-color: #00f0ff; box-shadow: 0 0 10px rgba(0,240,255,.4); }
+  nav button.break { color: #ff5147; border-color: #ff5147; }
+  canvas { display: block; width: min(100vw, calc((100vh - 60px) * 16 / 9)); aspect-ratio: 16 / 9; }
+</style>
+</head>
+<body>
+<nav>
+  <button data-s="4" class="on">Stage 1 · 4-point compass</button>
+  <button data-s="8">Stage 2 · 8-point rose</button>
+  <button data-s="16">Stage 3 · 16-point rose</button>
+  <button id="break" class="break">⚡ Break the compass</button>
+</nav>
+<canvas id="c"></canvas>
+<script>
+/* Look-and-feel mockup only: how the Core tree grows from a 4-point compass to an 8- and 16-point rose. */
+const W = 960, H = 540, FONT = 'Consolas, "Courier New", monospace';
+const C = { bg: '#04050c', core: '#b98cff', text: '#e6fbff', sub: '#5f9bb3', gold: '#ffd76a', red: '#ff5147' };
+const CARD = { N: '#ff5147', E: '#ffc21a', S: '#00f0ff', W: '#4dff9a' };
+const cv = document.getElementById('c'), dpr = Math.max(2, devicePixelRatio || 1);
+cv.width = W * dpr; cv.height = H * dpr;
+const ctx = cv.getContext('2d'); ctx.scale(dpr, dpr);
+const glow = (c, b) => { ctx.shadowColor = c; ctx.shadowBlur = b; }, noGlow = () => { ctx.shadowBlur = 0; };
+const hex = (x, y, r, rot = Math.PI / 6) => { ctx.beginPath(); for (let i = 0; i < 6; i++) { const a = rot + i * Math.PI / 3; ctx[i ? 'lineTo' : 'moveTo'](x + Math.cos(a) * r, y + Math.sin(a) * r); } ctx.closePath(); };
+const mix = (a, b, k = 0.5) => { const p = s => [1, 3, 5].map(i => parseInt(s.slice(i, i + 2), 16)); const A = p(a), B = p(b); return '#' + A.map((v, i) => Math.round(v + (B[i] - v) * k).toString(16).padStart(2, '0')).join(''); };
+
+/* 16 directions, angle 0 = North, clockwise */
+const DIRS = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
+function dirColor(i) { // cardinal colors, blended in between
+  const cards = ['N', 'E', 'S', 'W'], q = i / 4, a = Math.floor(q) % 4, k = q - Math.floor(q);
+  return k === 0 ? CARD[cards[a]] : mix(CARD[cards[a]], CARD[cards[(a + 1) % 4]], k);
+}
+const STAGE_INFO = {
+  4: { title: 'STAGE 1 · THE COMPASS', lines: [
+    'Polarity Shift → Cores → 4 branches:',
+    'N Active play · E Coins & events',
+    'S Economy · W Automation.',
+    '',
+    'Max all four keystones and the compass',
+    'starts to crack: BREAK THE COMPASS.'] },
+  8: { title: 'STAGE 2 · THE BROKEN COMPASS', lines: [
+    'Break the Compass: resets Cores and the',
+    'tree for SHARDS (second prestige layer).',
+    'Lodestones are kept.',
+    '',
+    'Intercardinal branches mix two neighbours:',
+    'NE Hunter · SE Merchant',
+    'SW Foundry · NW Machine',
+    '',
+    'New mechanic – POLARITY: right click flips',
+    'the magnet between attract and repel.'] },
+  16: { title: 'STAGE 3 · THE FULL ROSE', lines: [
+    'Second break: 8 thin mastery spokes',
+    '(NNE, ENE, …) – one strong node each.',
+    '',
+    'Light up every point of the rose to reach',
+    'TRUE NORTH: the ending – a final stats',
+    'screen and credits.',
+    '',
+    'Afterwards: endless mode with a growing',
+    'goal and best-time records.'] },
+};
+const HYBRID = { NE: 'HUNTER', SE: 'MERCHANT', SW: 'FOUNDRY', NW: 'MACHINE' };
+
+let stage = 4, shown = 4, breakAnim = null, t = 0;
+const CX = 330, CY = 280;
+
+function spoke(i) { // geometry of the branch in direction i (0..15)
+  const card = i % 4 === 0, inter = i % 4 === 2;
+  const len = card ? 215 : inter ? 175 : 140, a = i * Math.PI / 8 - Math.PI / 2;
+  return { a, len, card, inter, col: dirColor(i), ux: Math.cos(a), uy: Math.sin(a) };
+}
+function nodesOf(i) { // a few nodes along the branch: [dist, sideways]
+  const s = spoke(i);
+  if (s.card) return [[60, 0], [105, -16], [105, 16], [150, -26], [150, 0], [150, 26], [205, 0]];
+  if (s.inter) return [[70, 0], [115, -14], [115, 14], [165, 0]];
+  return [[95, 0], [135, 0]];
+}
+/** Parent of each node by index (-1 = the core), mirroring the game's b1 → b2/b3 → b4/b5/b6 → key shape. */
+function parentsOf(i) {
+  const s = spoke(i);
+  if (s.card) return [[-1], [0], [0], [1], [1, 2], [2], [3, 4, 5]];
+  if (s.inter) return [[-1], [0], [0], [1, 2]];
+  return [[-1], [0]];
+}
+function visibleDir(i, st) { return i % 4 === 0 || (st >= 8 && i % 4 === 2) || st >= 16; }
+
+function drawRose(st, alpha) { // the compass-rose emblem behind the core grows with the stage
+  const pts = st === 4 ? [0, 4, 8, 12] : st === 8 ? [0, 2, 4, 6, 8, 10, 12, 14] : [...Array(16).keys()];
+  ctx.globalAlpha = alpha;
+  for (const i of pts) {
+    const s = spoke(i), L = s.card ? 70 : i % 4 === 2 ? 50 : 34, wdt = s.card ? 10 : 7;
+    const tip = { x: CX + s.ux * L, y: CY + s.uy * L }, px = -s.uy, py = s.ux;
+    const g = ctx.createLinearGradient(CX, CY, tip.x, tip.y); g.addColorStop(0, s.col + '10'); g.addColorStop(1, s.col + '90');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(tip.x, tip.y);
+    ctx.lineTo(CX + px * wdt, CY + py * wdt); ctx.lineTo(CX - px * wdt, CY - py * wdt); ctx.closePath(); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+}
+
+function drawTree(st, fadeNew) {
+  for (let i = 0; i < 16; i++) {
+    if (!visibleDir(i, st)) continue;
+    const s = spoke(i), isNew = !visibleDir(i, st === 16 ? 8 : 4) && st !== 4;
+    const a = isNew ? fadeNew : 1;
+    if (a <= 0) continue;
+    ctx.globalAlpha = a;
+    const ns = nodesOf(i).map(([d, side]) => ({ x: CX + s.ux * d - s.uy * side, y: CY + s.uy * d + s.ux * side }));
+    ctx.strokeStyle = s.col + (s.card ? 'aa' : '77'); ctx.lineWidth = s.card ? 2 : 1.4; glow(s.col, 8);
+    ctx.beginPath();
+    parentsOf(i).forEach((ps, k) => ps.forEach(pi => {
+      const from = pi < 0 ? { x: CX + s.ux * 24, y: CY + s.uy * 24 } : ns[pi];
+      ctx.moveTo(from.x, from.y); ctx.lineTo(ns[k].x, ns[k].y);
+    }));
+    ctx.stroke(); noGlow();
+    ns.forEach((n, k) => {
+      const last = k === ns.length - 1, r = last ? (s.card ? 13 : 10) : (s.card ? 8 : 6.5);
+      glow(s.col, last ? 16 : 8); ctx.fillStyle = s.col + (last ? 'cc' : '55'); hex(n.x, n.y, r); ctx.fill();
+      ctx.strokeStyle = s.col; ctx.lineWidth = 1.4; ctx.stroke(); noGlow();
+    });
+    const tip = { x: CX + s.ux * (s.len + 22), y: CY + s.uy * (s.len + 22) };
+    ctx.fillStyle = s.col; ctx.font = `700 ${s.card ? 14 : s.inter ? 11 : 9}px ${FONT}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(DIRS[i], tip.x, tip.y);
+    if (s.inter && st >= 8) { ctx.fillStyle = s.col + 'aa'; ctx.font = `700 8px ${FONT}`; ctx.fillText(HYBRID[DIRS[i]], tip.x, tip.y + 12); }
+    ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+  }
+  ctx.globalAlpha = 1;
+  // core
+  const pulse = 0.5 + 0.5 * Math.sin(t * 3);
+  glow(C.core, 18 + pulse * 10); ctx.fillStyle = C.core + '88'; hex(CX, CY, 22, t * 0.3); ctx.fill();
+  ctx.strokeStyle = C.core; ctx.lineWidth = 2; ctx.stroke(); noGlow();
+  ctx.fillStyle = '#fff'; ctx.font = `700 14px ${FONT}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('◆', CX, CY + 1);
+  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+  if (st === 16) { // TRUE NORTH star past N
+    const y = CY - 262 + Math.sin(t * 2) * 2;
+    glow(C.gold, 20 + pulse * 12); ctx.fillStyle = C.gold; ctx.beginPath();
+    for (let k = 0; k < 10; k++) { const a = -Math.PI / 2 + k * Math.PI / 5, r = k % 2 ? 5 : 13; ctx[k ? 'lineTo' : 'moveTo'](CX + Math.cos(a) * r, y + Math.sin(a) * r); }
+    ctx.closePath(); ctx.fill(); noGlow();
+    ctx.fillStyle = C.gold; ctx.font = `700 10px ${FONT}`; ctx.textAlign = 'center'; ctx.fillText('TRUE NORTH', CX + 58, y + 4); ctx.textAlign = 'left';
+  }
+}
+
+function drawCracks(k) { // jagged cracks spreading from the core
+  ctx.strokeStyle = `rgba(255,255,255,${0.9 * (1 - Math.max(0, k - 0.6) / 0.4)})`; ctx.lineWidth = 1.6; glow('#fff', 12);
+  for (let c = 0; c < 9; c++) {
+    let x = CX, y = CY, a = c * 0.7 + 0.3;
+    const len = Math.min(1, k * 1.6) * 260;
+    ctx.beginPath(); ctx.moveTo(x, y);
+    for (let d = 0; d < len; d += 18) { a += Math.sin(c * 13.7 + d) * 0.5; x += Math.cos(a) * 18; y += Math.sin(a) * 18; ctx.lineTo(x, y); }
+    ctx.stroke();
+  }
+  noGlow();
+}
+
+function drawInfo(st) {
+  const x = 650, y = 70, w = 290, info = STAGE_INFO[st];
+  ctx.fillStyle = 'rgba(8,12,30,.88)'; ctx.beginPath(); ctx.roundRect(x, y, w, 400, 12); ctx.fill();
+  ctx.strokeStyle = 'rgba(185,140,255,.35)'; ctx.lineWidth = 1; ctx.stroke();
+  glow(C.core, 10); ctx.fillStyle = st === 16 ? C.gold : C.core; ctx.font = `700 13px ${FONT}`; ctx.fillText(info.title, x + 16, y + 30); noGlow();
+  ctx.fillStyle = C.text; ctx.font = `11px ${FONT}`;
+  info.lines.forEach((l, i) => ctx.fillText(l, x + 16, y + 60 + i * 18));
+  // progression strip
+  const sy = y + 340;
+  [4, 8, 16].forEach((n, i) => {
+    const sx = x + 40 + i * 105, on = n <= st;
+    glow(on ? C.core : '#000', on ? 10 : 0); ctx.fillStyle = on ? C.core + '66' : 'rgba(95,155,179,.15)'; hex(sx, sy, 16); ctx.fill();
+    ctx.strokeStyle = on ? C.core : 'rgba(95,155,179,.4)'; ctx.stroke(); noGlow();
+    ctx.fillStyle = on ? '#fff' : C.sub; ctx.font = `700 11px ${FONT}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(n, sx, sy + 1);
+    ctx.textBaseline = 'alphabetic';
+    if (i < 2) { ctx.strokeStyle = n < st ? C.core : 'rgba(95,155,179,.3)'; ctx.beginPath(); ctx.moveTo(sx + 22, sy); ctx.lineTo(sx + 83, sy); ctx.stroke(); }
+    ctx.textAlign = 'left';
+  });
+  ctx.fillStyle = C.sub; ctx.font = `9px ${FONT}`; ctx.textAlign = 'center';
+  ctx.fillText('compass → broken compass → full rose → true north', x + w / 2, sy + 34); ctx.textAlign = 'left';
+}
+
+function frame(now) {
+  t = now / 1000;
+  ctx.fillStyle = C.bg; ctx.fillRect(0, 0, W, H);
+  ctx.strokeStyle = 'rgba(185,140,255,.06)'; ctx.lineWidth = 1;
+  for (let r = 60; r < 600; r += 60) { ctx.beginPath(); ctx.arc(CX, CY, r, 0, Math.PI * 2); ctx.stroke(); }
+  let fade = 1;
+  if (breakAnim) {
+    const k = (now - breakAnim.start) / 1600;
+    if (k >= 1) { breakAnim = null; }
+    else {
+      if (k < 0.5) { drawRose(shown, 1); drawTree(shown, 1); drawCracks(k / 0.5); }
+      else {
+        if (shown !== stage) shown = stage;
+        fade = (k - 0.5) / 0.5;
+        drawRose(shown, 0.4 + 0.6 * fade); drawTree(shown, fade);
+        ctx.fillStyle = `rgba(255,255,255,${0.6 * (1 - fade)})`; ctx.fillRect(0, 0, W, H);
+      }
+      drawInfo(shown);
+      requestAnimationFrame(frame); return;
+    }
+  }
+  drawRose(shown, 1); drawTree(shown, 1); drawInfo(shown);
+  requestAnimationFrame(frame);
+}
+function setStage(n, animate) {
+  stage = n;
+  document.querySelectorAll('nav button[data-s]').forEach(b => b.classList.toggle('on', Number(b.dataset.s) === n));
+  if (animate) breakAnim = { start: performance.now() }; else shown = n;
+}
+document.querySelectorAll('nav button[data-s]').forEach(b => b.onclick = () => setStage(Number(b.dataset.s), false));
+document.getElementById('break').onclick = () => setStage(stage === 4 ? 8 : stage === 8 ? 16 : 4, true);
+const q = Number(new URLSearchParams(location.search).get('s'));
+if ([4, 8, 16].includes(q)) setStage(q, false);
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

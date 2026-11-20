@@ -1,5 +1,6 @@
 import { GOAL_METRICS } from '../data/goals';
 import { BOARD, PULSE } from '../data/tuning';
+import { bonuses } from '../game/prestige';
 import { antiUnlocked, catchRate, pulseUnlocked } from '../game/abilities';
 import { goalProgress, nextGoal } from '../game/goals';
 import type { GameState } from '../game/types';
@@ -23,12 +24,12 @@ function drawPulseWidget(ctx: Ctx, st: GameState): void {
   ctx.textBaseline = 'middle'; ctx.font = `700 10px ${FONT}`;
   if (!pulseUnlocked(st)) {
     ctx.strokeStyle = 'rgba(95,155,179,.3)'; ctx.lineWidth = 1; ctx.stroke();
-    ctx.fillStyle = COLORS.sub; ctx.fillText(S.pulseLocked(formatNumber(PULSE.unlockAt)), x + 10, y + h / 2);
+    ctx.fillStyle = COLORS.sub; ctx.fillText(S.pulseLocked(formatNumber(PULSE.unlockAt * bonuses(st.meta).unlockMult)), x + 10, y + h / 2);
   } else {
     const ready = st.pulseCd <= 0, active = st.pulseT > 0;
     if (!ready) {
       ctx.fillStyle = 'rgba(255,43,214,.18)';
-      ctx.beginPath(); ctx.roundRect(x, y, w * (1 - st.pulseCd / PULSE.cooldown), h, 6); ctx.fill();
+      ctx.beginPath(); ctx.roundRect(x, y, w * (1 - st.pulseCd / bonuses(st.meta).pulseCooldown), h, 6); ctx.fill();
     }
     ctx.strokeStyle = ready ? COLORS.magenta : 'rgba(255,43,214,.4)'; ctx.lineWidth = 1;
     if (ready) glow(ctx, COLORS.magenta, 8);

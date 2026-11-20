@@ -20,9 +20,10 @@ describe('mini-goals', () => {
     st.stats.caught = { basic: 5, gold: 3, prism: 2 };
     const out: GameEvent[] = [];
     checkGoals(st, out);
-    expect(out.map(e => e.type === 'goal' && e.goal.id)).toEqual(['coins-10']);
+    expect(out.filter(e => e.type === 'goal').map(e => e.type === 'goal' && e.goal.id)).toEqual(['coins-10']);
     checkGoals(st, out);
-    expect(out).toHaveLength(1);
+    expect(out.filter(e => e.type === 'goal')).toHaveLength(1);
+    expect(st.meta.crystals).toBe(1); // +1 Charge Crystal per goal
     expect(nextGoal(st, 'coins')?.target).toBe(100);
   });
 
@@ -33,8 +34,24 @@ describe('mini-goals', () => {
     st.stats.anti = 1;
     const out: GameEvent[] = [];
     checkGoals(st, out);
-    expect(out.map(e => e.type === 'goal' && e.goal.id)).toEqual(['coins-10', 'anti-1', 'gold-10', 'gold-50', 'prism-3', 'prism-7']);
+    expect(out.filter(e => e.type === 'goal').map(e => e.type === 'goal' && e.goal.id)).toEqual(['coins-10', 'anti-1', 'gold-10', 'gold-50', 'prism-3', 'prism-7']);
     expect(nextGoal(st, 'anti')).toBeNull();
+  });
+
+  it('pay seconds of perfect income as an instant reward', () => {
+    const st = createState();
+    st.stats.caught.basic = 10;
+    const out: GameEvent[] = [];
+    checkGoals(st, out);
+    // level 0: 1 coin per pickup × 1 spawn/s × 15 s
+    const goals = () => out.filter(e => e.type === 'goal');
+    expect(goals()[0]).toMatchObject({ type: 'goal', reward: 15 });
+    expect(st.money).toBe(15);
+    expect(st.totalEarned).toBe(15);
+    st.levels.value = 30; // 344 per coin
+    st.stats.caught.basic = 100;
+    checkGoals(st, out);
+    expect(goals()[1]).toMatchObject({ type: 'goal', reward: 344 * 20 });
   });
 
   it('have readable descriptions', () => {

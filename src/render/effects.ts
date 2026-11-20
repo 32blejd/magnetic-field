@@ -5,12 +5,12 @@ import { BOARD } from '../data/tuning';
 import type { UpgradeId } from '../data/upgrades';
 import type { Coin, GameEvent, GameState, Vec } from '../game/types';
 import { formatNumber } from '../ui/format';
-import { FEATURE_BANNERS, S, UPGRADE_TEXT } from '../ui/strings';
+import { FEATURE_BANNERS, M, S, UPGRADE_TEXT } from '../ui/strings';
 import { clamp } from './draw';
 import { COLORS } from './theme';
 
 export interface Particle { x: number; y: number; vx: number; vy: number; life: number; max: number; tier: TierId; phase: number }
-export interface FloatText { x: number; y: number; life: number; text: string; tier: TierId }
+export interface FloatText { x: number; y: number; life: number; text: string; tier: TierId; color?: string }
 export type ShockKind = TierId | 'pulse';
 export interface Shock { x: number; y: number; life: number; max: number; radius: number; kind: ShockKind }
 export interface Banner { title: string; sub: string; color: string; life: number; total: number }
@@ -24,6 +24,8 @@ export class Effects {
   /** Shown one at a time, in order. */
   banners: Banner[] = [];
   flash: Partial<Record<UpgradeId, number>> = {};
+  /** "+X" pops next to the wallet when a mini-goal pays out. */
+  goalPops: { text: string; life: number }[] = [];
   shake = 0;
   private earned: { t: number; v: number }[] = [];
   private trails = new WeakMap<Coin, Vec[]>();
@@ -67,20 +69,40 @@ export class Effects {
           this.shocks.push({ x: e.x, y: e.y, life: 0.6, max: 0.6, radius: 80, kind: 'basic' });
           break;
         case 'unlock':
-          this.banner(S.newUpgrade(UPGRADE_TEXT[e.id].name), UPGRADE_TEXT[e.id].desc, COLORS.cyan, 6);
+          // after the first shift the player knows the upgrades – just flash the row, no banner every run
+          if (st.meta.shifts === 0) this.banner(S.newUpgrade(UPGRADE_TEXT[e.id].name), UPGRADE_TEXT[e.id].desc, COLORS.cyan, 6);
           this.flash[e.id] = 1.2;
           break;
         case 'feature': {
+          if (st.meta.shifts > 0 && e.id !== 'anti') break;
           const b = FEATURE_BANNERS[e.id];
           const color = e.id === 'anti' ? COLORS.red : e.id === 'combo' ? COLORS.amber : COLORS.magenta;
           this.banner(b.title, b.sub, color, 3.2);
           break;
         }
+        case 'meteor':
+          this.banner(M.meteor.title, M.meteor.sub, COLORS.amber);
+          break;
+        case 'crystal': // only once the Magnetron is open – before that crystals pile up silently
+          if (st.meta.shifts > 0) this.floats.push({ x: e.x, y: e.y, life: 1.2, text: `+${e.amount} ◈`, tier: 'gold', color: COLORS.core });
+          break;
+        case 'shield':
+          this.floats.push({ x: e.x, y: e.y - 10, life: 1.2, text: M.shieldPop, tier: 'gold', color: COLORS.core });
+          this.shocks.push({ x: e.x, y: e.y, life: 0.4, max: 0.4, radius: 36, kind: 'pulse' });
+          break;
         case 'goal':
-          this.banner(S.goalComplete, S.goalText(e.goal), COLORS.amber, 3);
+          this.earned.push({ t: st.t, v: e.reward });
+          this.banner(S.goalComplete(formatNumber(e.reward)), S.goalText(e.goal), COLORS.amber, 3);
+          this.goalPops.push({ text: `+${formatNumber(e.reward)}`, life: 1.6 });
           break;
       }
     }
+  }
+
+  /** Clears everything tied to the previous run (after Polarity Shift). */
+  reset(): void {
+    this.parts = []; this.floats = []; this.shocks = []; this.banners = []; this.flash = {}; this.goalPops = [];
+    this.shake = 0; this.earned = []; this.trails = new WeakMap();
   }
 
   pulseShock(at: Vec, radius: number): void {
@@ -115,6 +137,8 @@ export class Effects {
     this.shocks = this.shocks.filter(s => s.life > 0);
     for (const f of this.floats) { f.y -= 34 * dt; f.life -= dt; }
     this.floats = this.floats.filter(f => f.life > 0);
+    for (const g of this.goalPops) g.life -= dt;
+    this.goalPops = this.goalPops.filter(g => g.life > 0);
     const b = this.banners[0];
     if (b && (b.life -= dt) <= 0) this.banners.shift();
     this.earned = this.earned.filter(e => st.t - e.t < 10);

@@ -80,7 +80,7 @@ describe('save', () => {
     expect(loaded.movedToBackup).toBe(true);
     expect(storage.getItem(BACKUP_KEY)).toBe(broken);
     // a save from a newer game version is kept too
-    storage.setItem(SAVE_KEY, JSON.stringify({ version: 2, money: 1 }));
+    storage.setItem(SAVE_KEY, JSON.stringify({ version: 99, money: 1 }));
     expect(loadGame(storage).movedToBackup).toBe(true);
   });
 

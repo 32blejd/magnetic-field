@@ -55,14 +55,16 @@ The target feeling: every upgrade is **visible on screen** (bigger field, more c
 - **Pulse** (active ability) – SPACE or right click: ×3 range for 1 s, 25 s cooldown. Widget in the bottom-left of the board shows ready / cooldown / locked hint.
 - **Anti-coins** – touching one short-circuits the magnet: it turns off for **1.5 s** (flickering red, `OFFLINE` countdown) and the combo resets. The board shakes. Every anti-coin is **telegraphed for 1 s** before it appears: a red crosshair at the spawn point with two rings closing in, a growing red glow and a blinking `!` that speeds up. Pulse's extra range doesn't apply to them. They drift very slowly (×0.2), are only weakly pulled, and **disappear on their own after 5 s** (fading and shrinking over the last 0.8 s; still dangerous until gone), so they act as temporary obstacles a careful player steers around.
 - **Run stats** – top-left of the board: run time, catch %, missed coins, best combo.
-- **Mini-goals** – in-run goals; completing one shows a `GOAL COMPLETE` banner. The tracker in the bottom-right of the board shows the next unfinished goal per category with progress (anti goals appear once anti-coins are unlocked). No rewards yet.
+- **Mini-goals** – short-term in-run goals that pay an **instant cash boost**: `rewardSeconds × value per coin × spawn rate` ("N seconds of perfect income", from upgrade levels, so events don't inflate it). Completing one shows a `GOAL COMPLETE · +X` banner and a gold `+X` pop next to the wallet. The tracker in the bottom-right of the board shows the next unfinished goal per category (anti goals appear once anti-coins are unlocked). Goals reset with Polarity Shift.
 
-  | Category | Targets |
+  | Category | Targets (reward in seconds of perfect income) |
   |---|---|
-  | Coins (any non-anti coin) | 10 · 100 · 1,000 · 10,000 |
-  | Anti-coins | 1 |
-  | Gold coins | 10 · 50 · 100 |
-  | Prism coins | 3 · 7 · 11 · 49 |
+  | Coins (any non-anti coin) | 10 (15 s) · 100 (20 s) · 1,000 (30 s) · 10,000 (45 s) |
+  | Anti-coins | 1 (20 s) |
+  | Gold coins | 10 (20 s) · 50 (30 s) · 100 (45 s) |
+  | Prism coins | 3 (20 s) · 7 (30 s) · 11 (40 s) · 49 (60 s) |
+
+  Example: "Catch 10 coins" at the start pays 15 (1 coin × 1/s × 15 s); "Catch 100 coins" with Value 30 pays 344 × spawn × 20 s.
 
 ## Visual style
 
@@ -95,13 +97,13 @@ What each stat does:
 
 | Upgrade | Effect formula (level `l`) | Lv 0 | Max level | At max | Base cost | Cost growth | Unlock |
 |---|---|---|---|---|---|---|---|
-| Value | `round((1 + k) × 1.15^k)`, `k = 20l/30` | 1 | 30 | 344 | 8 | ×1.58 | start |
-| Range | `30 + 5l` px | 30 px | 20 | 130 px | 4 | ×1.71 | start |
-| Spawn rate | `1.0 × 1.14^l` /s | 1.00/s | 20 | 13.74/s | 4 | ×1.71 | start |
-| Strength | `0.5 × 1.15^(20l/15)` | 0.50× | 15 | 8.18× | 6 | ×2.04 | 30 earned |
-| Capacity | `8 + round(40l/15)` coins | 8 | 15 | 48 | 10 | ×2.11 | 150 earned |
+| Value | `round((1 + k) × 1.15^k)`, `k = 20l/30` | 1 | 30 | 344 | 8 | ×1.60 | start |
+| Range | `30 + 5l` px | 30 px | 20 | 130 px | 4 | ×1.73 | start |
+| Spawn rate | `1.0 × 1.14^l` /s | 1.00/s | 20 | 13.74/s | 4 | ×1.73 | start |
+| Strength | `0.5 × 1.15^(20l/15)` | 0.50× | 15 | 8.18× | 6 | ×2.07 | 30 earned |
+| Capacity | `8 + round(40l/15)` coins | 8 | 15 | 48 | 10 | ×2.14 | 150 earned |
 | Rarity | `+0.5% × l` to each rare tier | +0% | 10 | Gold 15% · Prism 6% | 50 | ×2.2, plus ×2 per level for Lv 8–10 | 1,000 earned |
-| Coin speed | `1.95 / 0.96^(15l/10)` s | 1.95 s | 10 | 3.60 s | 15 | ×2.94 | 3,000 earned |
+| Coin speed | `1.95 / 0.96^(15l/10)` s | 1.95 s | 10 | 3.60 s | 15 | ×2.98 | 3,000 earned |
 
 Caps were changed (Value 20 → 30, Strength/Capacity 20 → 15, Coin speed 15 → 10) while keeping the value at max the same: effects are written in terms of progress `level / max`, and cost growth was rescaled so the total cost of each upgrade stays similar.
 
@@ -115,49 +117,127 @@ Sample costs:
 
 | Upgrade | Lv 0 | Lv 1 | Lv 2 | Lv 5 | Lv 10 | Lv 15 | Lv 20 | Last level |
 |---|---|---|---|---|---|---|---|---|
-| Value | 8 | 13 | 20 | 79 | 776 | 7,637 | 75,202 | 4,614,722 (Lv 29) |
-| Range | 4 | 7 | 12 | 58 | 855 | 12,503 | – | 106,902 (Lv 19) |
-| Spawn rate | 4 | 7 | 12 | 58 | 855 | 12,503 | – | 106,902 (Lv 19) |
-| Strength | 6 | 12 | 25 | 212 | 7,490 | – | – | 129,710 (Lv 14) |
-| Capacity | 10 | 21 | 45 | 418 | 17,491 | – | – | 346,700 (Lv 14) |
+| Value | 8 | 13 | 20 | 84 | 880 | 9,223 | 96,714 | 6,646,140 (Lv 29) |
+| Range | 4 | 7 | 12 | 62 | 961 | 14,885 | – | 133,332 (Lv 19) |
+| Spawn rate | 4 | 7 | 12 | 62 | 961 | 14,885 | – | 133,332 (Lv 19) |
+| Strength | 6 | 12 | 26 | 228 | 8,667 | – | – | 159,124 (Lv 14) |
+| Capacity | 10 | 21 | 46 | 449 | 20,144 | – | – | 422,467 (Lv 14) |
 | Rarity | 50 | 110 | 242 | 2,577 | – | – | – | 482,908 (Lv 9) |
-| Coin speed | 15 | 44 | 130 | 3,295 | – | – | – | 246,160 (Lv 9) |
+| Coin speed | 15 | 45 | 133 | 3,525 | – | – | – | 277,995 (Lv 9) |
 
-Total cost to max everything ≈ 15M – far beyond one run; Value's top levels are the long-term sink.
+Total cost to max everything ≈ 20.5M – far beyond one run; Value's top levels are the long-term sink.
 
 ### Balance target
 
-**Earn 1M coins in a run (total earned, not held) in ~20 minutes of active play, buying upgrades as soon as they're affordable.**
+**First run: earn 1M coins (total earned, not held) in ~18 minutes of active play, buying upgrades as soon as they're affordable.**
 
 Checked with the balance simulator ([scripts/balance-sim.ts](../scripts/balance-sim.ts) + [scripts/bot.ts](../scripts/bot.ts)): a bot plays the real game logic – dodges nearby anti-coins and their warnings, chases the nearest good coin, fires Pulse when 3+ coins are on the board, and always buys the cheapest affordable upgrade.
 
 | Milestone (earned this run) | Slow (250 px/s) | Average (400 px/s) | Fast (600 px/s) |
 |---|---|---|---|
-| 100 | 0:59 | 0:48 | 0:44 |
-| 1,000 | 2:38 | 2:01 | 1:55 |
-| 10,000 | 5:41 | 4:28 | 4:00 |
-| 100,000 | 10:29 | 8:21 | 7:26 |
-| **1,000,000** | **22:41** | **19:20** | **17:22** |
-| catch rate | 66% | 75% | 82% |
+| 100 | 0:44 | 0:34 | 0:32 |
+| 1,000 | 1:56 | 1:25 | 1:12 |
+| 10,000 | 4:29 | 3:41 | 2:51 |
+| 100,000 | 7:36 | 6:23 | 5:25 |
+| **1,000,000** | **20:47** | **18:06** | **15:49** |
+| catch rate | 66% | 75% | 83% |
 
 Player skill matters (~5 min between a fast and a slow player): combo, anti-coins and Pulse all reward active play.
 
-Run: `npm run sim -- [cursorSpeed] [runs]`. Quick tuning without editing files: `OV='{"value":{"growth":1.6}}' npm run sim`. `npm test` includes a guard that the average bot reaches 1M in 16–24 min.
+Later runs (average bot; after each shift it spends Cores on the cheapest purchasable nodes and all crystals in the Magnetron). The goal grows linearly (+1.5M per shift), so each run is a bit faster than the previous one:
 
-### Extended (unlocked later)
+| Run | Goal | Cores earned before the run | Reached in |
+|---|---|---|---|
+| 1 | 1M | 0 | 18:06 |
+| 2 | 2.5M | 10 | 17:22 |
+| 3 | 4M | 20 | 13:30 |
+| 4 | 5.5M | 30 | 12:19 |
+| 5 | 7M | 40 | 9:43 |
+| 6 | 8.5M | 50 | 8:49 |
+| 7 | 10M | 60 | 6:54 |
+| 8 | 11.5M | 70 | 5:49 |
 
-- **Rare coin upgrades** – more tiers beyond Prism.
-- **Satellites** – extra small magnets orbiting the cursor (count, orbit radius, their own range). Fits better as a late-game or prestige reward.
-- **Pulse upgrades** – shorter cooldown, longer duration.
+From ~run 8 the bot has bought most purchasable (non-SOON) nodes and runs drop under 6 min – that's where M5 nodes and the endgame come in. An exponential goal (×2–3 per shift) was tried and rejected: in-run income has a ceiling (upgrade caps), so from run 5 the goal took hours. Goal step 1.5 (instead of 1) compensates for Lodestones.
 
-### Automation
+Run: `npm run sim -- [cursorSpeed] [runs] [shifts]`. Quick tuning without editing files: `OV='{"value":{"growth":1.6}}' npm run sim`. `npm test` includes a guard that the average bot reaches 1M in the first run in 16–20 min.
 
-- **Drones** – autonomous magnets roaming the board (count, speed, range).
-- **Offline** – on return the player receives part of the drones' output for the time away (e.g. 50%, capped at 8 h).
+### Lodestones – the Magnetron (gacha)
 
-### Prestige – "Polarity Shift"
+Opens after the first Polarity Shift: `◈ N [G]` button in the panel header (or key `G`). Data: `src/data/lodestones.ts`, logic: `src/game/lodestones.ts`. Everything here is kept forever (meta).
 
-Requirement: **earn 1M total in the current run.** Resets currency and upgrades in exchange for **Cores**. Cores give a permanent percentage bonus and unlock new mechanics (e.g. new coin types, field shapes). Lives in the bar under the board. Details to be designed in milestone M5.
+- **Charge Crystals**: +1 per mini-goal, +1 per event, +3 per shift, Prism pickups drop one 5% of the time (+ Neodymium bonus). Earned from the start; visible once the Magnetron opens.
+- **Pull** = 10 crystals (×1 or ×10). Odds: Common 45% · Rare 32% · Epic 17% · Legendary 6%. **Pity**: Epic or better guaranteed on the 20th pull without one.
+- **16 stones** = 4 elements × 4 rarities (Shard / Ingot / Heart / Crown). Duplicates level a stone up to **Lv 3**; duplicates of a maxed stone refund 3 crystals.
+
+| Rarity | Coin value / level | Extra / level (Epic; Legendary ×2) |
+|---|---|---|
+| Common | +1% | – |
+| Rare | +2% | – |
+| Epic | +3% | Iron: +2% range · Cobalt: +0.2% Gold & Prism chance · Nickel: +5% mini-goal rewards · Neodymium: +1% crystal chance |
+| Legendary | +5% | double the Epic extra |
+
+- **Set bonus**: owning all four stones of an element (any level): +5% coin value. Everything maxed (Lv 3) ≈ +150% coin value. Rough full-collection estimate: ~170–220 pulls ≈ 60–75 shifts ≈ 8–10 h.
+- Screen: machine + pity counter on the left, 4×4 collection on the right (hover for effects), card-flip reveal after a pull. The run is paused while it's open.
+
+### Endgame – "Break the Compass" (plan, mockup: [mockups/compass-rose.html](mockups/compass-rose.html))
+
+1. **Stage 1 – compass** (now): 4 branches.
+2. **Stage 2 – broken compass**: after all four keystones the compass cracks. Second prestige layer resets Cores and the tree for **Shards**; Lodestones are kept. Intercardinal branches mix two neighbours – NE Hunter (active + coins), SE Merchant (coins + economy), SW Foundry (economy + automation), NW Machine (automation + active). New mechanic **Polarity**: right click flips the magnet between attract and repel.
+3. **Stage 3 – full 16-point rose**: 8 thin mastery spokes (NNE, ENE, …), one strong node each. Lighting up the whole rose reaches **TRUE NORTH** – the ending (final stats, credits), then an endless mode with a growing goal and best-time records.
+
+### Prestige – "Polarity Shift" (UI mockup: [mockups/polarity-shift.html](mockups/polarity-shift.html))
+
+Requirement: **earn the run goal = 1M × (1 + 1.5 × shifts)** – 1M, 2.5M, 4M, 5.5M, … Reward: **Cores** = `floor(10 × √(earned this run ÷ goal))` – about 10 at the goal of any run, 14 at 2× the goal, 20 at 4×, so playing on pays off with diminishing returns (e.g. a planned longer grind for extra Cores).
+
+**Flow**
+
+1. **From 100k earned** a `◆ CORE TREE [T]` button appears in the prestige bar: the tree can be **browsed** (read-only preview) mid-run.
+2. **At 1M** the bar glows and shows `SHIFT POLARITY [P]` with the Cores you'd get now and the earnings needed for the next one.
+3. Shift opens the **Core tree** with this run's Cores added. The player places them; choices are **tentative** (UNDO / NOT YET revert them).
+4. `SHIFT & START RUN` shows a **confirm dialog over the tree**: Cores earned, spent and saved, what resets (coins, upgrade levels, unlocks, mini-goals, run stats) and what's kept (Cores, Core tree, lifetime stats, settings).
+5. Confirm → "polarity flip" animation from the Core → a new run starts.
+
+The run is paused while the tree or the confirm dialog is open. Keys: `T` tree preview, `P` shift, `Esc` back, `Enter` confirm. After the first shift, "NEW UPGRADE" / feature banners are not repeated (rows still flash); the anti-coin warning still shows.
+
+**Core tree** – nodes revealed next to owned ones; drag to pan, scroll to zoom. Four branches on real compass directions (N red like a compass needle), each b1 → b2/b3 → b4/b5/b6 → keystone. Data: `src/data/prestige.ts`, effects: `src/game/prestige.ts`.
+
+| Node | Effect | Levels | Cost (◆ per level) | Status |
+|---|---|---|---|---|
+| **Polarity Core** (centre) | +2% coin value per Core ever earned | – | – | ✅ |
+| **N · Active play** (red) | | | | |
+| Charged Field | +10% field range / lv | 3 | 1 · 2 · 3 | ✅ |
+| Momentum | moving the cursor fast widens the field: up to +15% range / lv at 500 px/s | 2 | 2 · 4 | ✅ |
+| Hot Streak | combo window +0.3 s / lv | 2 | 2 · 4 | ✅ |
+| Combo Shield | once every 30 s an anti-coin doesn't reset the combo | 1 | 5 | ✅ |
+| Grounding | anti-coin short circuit −0.4 s / lv | 2 | 3 · 5 | ✅ |
+| Combo Limit | max combo ×2 → ×2.5 | 1 | 5 | ✅ |
+| Satellites (keystone) | mini-magnets orbiting the cursor | 3 | 10 · 15 · 20 | SOON (M5) |
+| **E · Coins & events** (amber) | | | | |
+| Lucky Charge | +1% Gold and Prism chance / lv | 3 | 2 · 3 · 4 | ✅ |
+| Prism Resonance | Prism worth ×4 (speed stays ×3) | 1 | 6 | ✅ |
+| Storm Front | events +20% more often / lv | 2 | 2 · 4 | ✅ |
+| Chain Reaction | Prism pickup pulls coins within 80 px | 1 | 6 | SOON (M5) |
+| Meteor Shower | new event: a line of 12 fast coins sweeps in from one edge | 1 | 5 | ✅ |
+| Golden Fountain | Fountain events spray Gold only | 1 | 5 | ✅ |
+| Void Coin (keystone) | new ×10 coin tier | 1 | 15 | SOON (M5) |
+| **S · Economy** (cyan) | | | | |
+| Dividend | +15% coin value / lv | 5 | 1 · 2 · 3 · 4 · 5 | ✅ |
+| Head Start | start runs with 500 / 5k / 50k coins | 3 | 2 · 4 · 6 | ✅ |
+| Discount | upgrades −8% cost / lv | 3 | 2 · 4 · 6 | ✅ |
+| Fast Track | upgrades, Combo, Pulse unlock at half the earnings | 1 | 4 | ✅ |
+| Compound | +1% value per run minute, max +30% | 1 | 5 | ✅ |
+| Core Yield | +20% Cores per shift / lv | 2 | 6 · 10 | ✅ |
+| Interest (keystone) | +1% of held coins every 10 s | 1 | 14 | SOON (M5) |
+| **W · Automation** (green) | | | | |
+| Bulk Buy | Shift + key/click buys max levels | 1 | 1 | ✅ |
+| Auto-buyer | buys the cheapest upgrade automatically | 1 | 6 | SOON (M5) |
+| Magnet Memory | field keeps working 1 s after leaving the board | 1 | 3 | ✅ |
+| Auto-pulse | Pulse fires when 5+ coins are in range | 1 | 8 | SOON (M5) |
+| Homing Prisms | Prism coins steer toward the magnet from anywhere | 1 | 4 | ✅ |
+| Auto-shift | shift automatically at a set target | 1 | 12 | SOON (M5) |
+| Drones (keystone) | autonomous magnets | 3 | 12 · 18 · 24 | SOON (M5) |
+
+"SOON" nodes are visible in the tree but can't be bought until M5.
 
 ## Milestones
 
@@ -166,16 +246,16 @@ Requirement: **earn 1M total in the current run.** Resets currency and upgrades 
 | **M0** | Skeleton: Vite + TS, canvas, fixed simulation step, layout (board, prestige bar placeholder, panel), tests running | an empty board with a cursor magnet runs smoothly | ✅ |
 | **M1** | Core: coin spawn animation, drift, pull, pickup, currency counter | you can play and collect coins | ✅ |
 | **M2** | Shop with the 7 core upgrades + progressive unlocks, coin tiers, combo, number formatting, save/load | the "collect → buy" loop works and survives a page refresh | ✅ |
-| **M3** | Events, Pulse, anti-coins, run stats, mini-goals | the main loop has variety and rewards skill | ✅ (goal rewards TBD) |
-| **M4** | Drones, offline progress | the game progresses without input | |
-| **M5** | Prestige | there's a reason to start over | |
+| **M3** | Events, Pulse, anti-coins, run stats, mini-goals | the main loop has variety and rewards skill | ✅ |
+| **M4** | Polarity Shift: Cores, Core tree screen (browse from 100k, spend on shift, confirm), simple nodes (stat bonuses) | there's a reason to start over | ✅ |
+| **M5** | Lodestones / Magnetron ✅ · keystones and mechanics from the tree: Satellites, Void Coin, Chain Reaction, Interest, auto-buyer, Auto-pulse, Auto-shift, Drones | the game partly plays itself | in progress |
 | **M6** | Polish: sounds, more particles, save export UI, satellites | the game *feels* good | |
 
 **MVP = M0–M2.** Collecting coins has to be fun on its own before we add more systems. M0–M3 were built by porting a single-file JS prototype to TypeScript (`src/`). The prototype was then removed so the numbers live in one place; it's still in the git history (first commit, `docs/mockups/`).
 
 ## Debug URL params (testing)
 
-Work on `npm run dev` / `npm run preview`: `?nosave=1` don't load/write the save · `?reset=1` clear the save · `?warm=N` fast-forward N seconds · `?earned=N` start as if N coins were earned (unlocks + money) · `?rare=1` boost rare coin chances · `?anti=1` boost anti-coin chance to 30% (needs `earned` ≥ 25000). Combine with `&`.
+Work on `npm run dev` / `npm run preview`: `?nosave=1` don't load/write the save · `?reset=1` clear the save · `?warm=N` fast-forward N seconds · `?earned=N` start as if N coins were earned (unlocks + money) · `?rare=1` boost rare coin chances · `?anti=1` boost anti-coin chance to 30% (needs `earned` ≥ 25000) · `?cores=N` set unspent Cores · `?open=shift` open the Core tree to spend Cores (with `earned=1000000`) · `?open=browse` open the tree preview · `?shifts=N` set completed shifts · `?crystals=N` set Charge Crystals · `?pulls=N` pull N lodestones on load · `?open=gacha` open the Magnetron. Combine with `&`.
 
 ## Out of scope (for now)
 

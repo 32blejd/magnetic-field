@@ -9,7 +9,7 @@ Full game outline, numbers, balance and milestones: [docs/DESIGN.md](docs/DESIGN
 - TypeScript (strict) + Vite
 - Everything is drawn on one 2D `<canvas>` (board, HUD, panel) in a 960×540 logical view, scaled to the window
 - Tests: Vitest. Balance simulator: `tsx`
-- Numbers: plain `number` for now. Gameplay arithmetic and comparisons on currency go through `src/game/money.ts` (`costOf`, `buy`, `earn`, `coinValue`, `hasEarned`, `earnedShare`); other code only stores, saves or formats the values. A switch to `break_eternity.js` would touch `money.ts`, the save format, `ui/format.ts` and the income readout in `render/effects.ts`
+- Numbers: plain `number` for now. Gameplay arithmetic and comparisons on currency go through `src/game/money.ts` (`costOf`, `earn`, `spend`, `coinValue`, `hasEarned`, `earnedShare`, `goalReward`) and `src/game/shop.ts` (upgrade costs with the Discount node, `buy`, `buyMax`); other code only stores, saves or formats the values. A switch to `break_eternity.js` would touch those two files, the save format, `ui/format.ts` and the income readout in `render/effects.ts`
 
 ## Commands
 
@@ -24,7 +24,7 @@ npm run sim -- [cursorSpeed=400] [runs=3]   # balance simulator (bot plays the r
 
 `npm test` goes through `scripts/vitest.mjs`, which upper-cases the drive letter of the working directory first. On Windows a `c:\…` cwd (e.g. a VS Code terminal) makes Vitest load itself twice and every test fails with "Cannot read properties of undefined (reading 'config')". Don't call `vitest` directly.
 
-Debug URL params (dev or preview): `?nosave=1`, `?reset=1`, `?earned=N`, `?warm=N`, `?rare=1`, `?anti=1` – see `src/debug.ts`.
+Debug URL params (dev or preview): `?nosave=1`, `?reset=1`, `?earned=N`, `?cores=N`, `?shifts=N`, `?crystals=N`, `?pulls=N`, `?open=shift|browse|gacha`, `?warm=N`, `?rare=1`, `?anti=1` – see `src/debug.ts`.
 
 ## Structure
 
@@ -39,7 +39,7 @@ src/
   main.ts    # wires everything together, game loop
 scripts/     # bot + balance simulator, Vitest launcher
 tests/       # Vitest tests (formulas, simulation, goals, save, ui formatting/currency helpers, balance)
-docs/        # DESIGN.md – game design, numbers, balance tables
+docs/        # DESIGN.md – game design, numbers, balance tables; docs/mockups/ – standalone UI mockups (look & flow only, not the source of any numbers)
 ```
 
 ## Architecture rules
@@ -55,7 +55,7 @@ docs/        # DESIGN.md – game design, numbers, balance tables
 
 ## Saving
 
-- `localStorage`, key `magnetic-field-save`, JSON with a `version` field (`save/save.ts`).
+- `localStorage`, key `magnetic-field-save`, JSON with a `version` field (`save/save.ts`), currently version 3 (v2 added the Polarity Shift `meta`: Cores, shifts, Core tree; v3 added the Magnetron: Charge Crystals, Lodestones, pity counter).
 - Loading is tolerant: only currency and levels are required, missing fields fall back to defaults, wrong types reject the save. A save that can't be read (corrupted or from a newer version) is copied to `magnetic-field-save-unreadable` before the game starts fresh, so autosave never destroys it; the player sees a banner.
 - Every change to the saved shape = bump `CURRENT_VERSION` + a migration step in `save/migrations.ts` + a test. Never break old saves.
 - Autosave every 30 s and on `visibilitychange`/`beforeunload`. Export/import as base64 text exists in `save/save.ts` (no UI yet).
@@ -65,4 +65,4 @@ docs/        # DESIGN.md – game design, numbers, balance tables
 - Everything in English: code, comments, docs and UI text. All player-facing strings live in `src/ui/strings.ts`.
 - Small pure functions in `game/`; side effects (DOM, localStorage, time) only in `main.ts`/`ui/input.ts`.
 - Counts and amounts shown to the player always go through `formatNumber`/`formatShort` before reaching a string in `ui/strings.ts`; seconds, percentages and multipliers use fixed precision (`toFixed`/`Math.round`).
-- After logic or tuning changes run `npm test` (includes a balance guard: average bot reaches 1M in 16–24 min) and, for tuning, `npm run sim` at 250/400/600 and update DESIGN.md. After UI changes check the game in `npm run dev`.
+- After logic or tuning changes run `npm test` (includes a balance guard: average bot reaches 1M in the first run in 16–20 min, target 18) and, for tuning, `npm run sim` at 250/400/600 and update DESIGN.md. After UI changes check the game in `npm run dev`.

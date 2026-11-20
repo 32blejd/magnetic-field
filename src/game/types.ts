@@ -36,7 +36,7 @@ export interface AntiWarning {
 }
 
 export interface ActiveEvent {
-  type: 'burst' | 'fountain';
+  type: 'burst' | 'fountain' | 'meteor';
   t: number;
   total: number;
 }
@@ -50,7 +50,26 @@ export interface RunStats {
 
 export type FeatureId = 'combo' | 'pulse' | 'anti';
 
+/** Progress that survives Polarity Shift. */
+export interface MetaState {
+  /** Unspent Cores. */
+  cores: number;
+  /** Every Core ever earned (powers the Polarity Core bonus). */
+  coresEarned: number;
+  /** Number of completed shifts. */
+  shifts: number;
+  /** Core tree node levels by node id. */
+  nodes: Record<string, number>;
+  /** Charge Crystals (Magnetron currency). */
+  crystals: number;
+  /** Lodestone levels by id (1–5). */
+  lodestones: Record<string, number>;
+  /** Pulls since the last Epic-or-better (pity counter). */
+  pity: number;
+}
+
 export interface GameState {
+  meta: MetaState;
   /** RNG state (mulberry32). */
   rng: number;
   /** Run time (s). */
@@ -77,6 +96,11 @@ export interface GameState {
   pulseT: number;
   stunT: number;
   event: ActiveEvent | null;
+  /** Last magnet position and smoothed magnet speed (px/s) – for Momentum. */
+  lastMagnet: Vec | null;
+  magnetSpeed: number;
+  /** Combo Shield cooldown (s). */
+  shieldCd: number;
 }
 
 /** Things that happened during a simulation step, consumed by effects/UI. */
@@ -88,4 +112,7 @@ export type GameEvent =
   | { type: 'fountain'; x: number; y: number }
   | { type: 'unlock'; id: UpgradeId }
   | { type: 'feature'; id: FeatureId }
-  | { type: 'goal'; goal: GoalDef };
+  | { type: 'goal'; goal: GoalDef; reward: number }
+  | { type: 'meteor' }
+  | { type: 'crystal'; amount: number; x: number; y: number }
+  | { type: 'shield'; x: number; y: number };

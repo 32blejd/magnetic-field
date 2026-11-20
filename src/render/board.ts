@@ -1,5 +1,6 @@
-import { ANTI, BOARD, COIN_RADIUS, COMBO, MAGNET_RADIUS, SPAWN_TIME } from '../data/tuning';
+import { ANTI, BOARD, COIN_RADIUS, MAGNET_RADIUS, SPAWN_TIME } from '../data/tuning';
 import { comboMult } from '../game/abilities';
+import { bonuses } from '../game/prestige';
 import type { Stats } from '../game/stats';
 import type { AntiWarning, Coin, GameState, Vec } from '../game/types';
 import { formatNumber } from '../ui/format';
@@ -165,7 +166,7 @@ function drawMagnet(ctx: Ctx, st: GameState, m: Vec, range: number): void {
   ctx.fillStyle = '#ffd0f5'; ctx.beginPath(); ctx.arc(m.x, m.y, 3, 0, Math.PI * 2); ctx.fill(); noGlow(ctx);
 
   if (st.combo >= 2) { // combo badge + timer arc
-    const mult = comboMult(st.combo), k = Math.max(0, st.comboT / COMBO.window), hot = mult >= COMBO.max;
+    const b = bonuses(st.meta), mult = comboMult(st.combo, b.comboMax), k = Math.max(0, st.comboT / b.comboWindow), hot = mult >= b.comboMax;
     const col = hot ? COLORS.amber : COLORS.magenta;
     ctx.strokeStyle = col; ctx.lineWidth = 2; glow(ctx, col, 8);
     ctx.beginPath(); ctx.arc(m.x, m.y, MAGNET_RADIUS + 5, -Math.PI / 2, -Math.PI / 2 + k * Math.PI * 2); ctx.stroke();
@@ -178,7 +179,7 @@ function drawMagnet(ctx: Ctx, st: GameState, m: Vec, range: number): void {
 function drawFloats(ctx: Ctx, st: GameState, fx: Effects): void {
   ctx.textAlign = 'center';
   for (const f of fx.floats) {
-    const rare = f.tier !== 'basic', col = rare ? tierColor(f.tier, st.t) : COLORS.pink;
+    const rare = f.tier !== 'basic', col = f.color ?? (rare ? tierColor(f.tier, st.t) : COLORS.pink);
     ctx.font = `700 ${f.tier === 'anti' ? 12 : rare ? 16 : 13}px ${FONT}`;
     ctx.globalAlpha = Math.min(1, f.life / 0.4);
     glow(ctx, rare ? col : COLORS.magenta, rare ? 12 : 8);

@@ -1,8 +1,15 @@
 import { EVENTS } from '../data/tuning';
 import { UPGRADES, type UpgradeId } from '../data/upgrades';
-import type { GameState } from './types';
+import type { GameState, MetaState } from './types';
 
-export function createState(seed = 7): GameState {
+export const emptyMeta = (): MetaState => ({ cores: 0, coresEarned: 0, shifts: 0, nodes: {}, crystals: 0, lodestones: {}, pity: 0 });
+
+/**
+ * A fresh run.
+ * @param meta progress kept across Polarity Shifts (Cores, Core tree)
+ * @param startMoney coins to start with (Head Start node)
+ */
+export function createState(seed = 7, meta: MetaState = emptyMeta(), startMoney = 0): GameState {
   const levels = {} as Record<UpgradeId, number>;
   const unlocked = {} as Record<UpgradeId, boolean>;
   for (const u of UPGRADES) {
@@ -10,9 +17,10 @@ export function createState(seed = 7): GameState {
     unlocked[u.id] = u.unlockAt === 0;
   }
   return {
+    meta,
     rng: seed | 0,
     t: 0,
-    money: 0,
+    money: startMoney,
     totalEarned: 0,
     levels,
     unlocked,
@@ -31,5 +39,8 @@ export function createState(seed = 7): GameState {
     pulseT: 0,
     stunT: 0,
     event: null,
+    lastMagnet: null,
+    magnetSpeed: 0,
+    shieldCd: 0,
   };
 }

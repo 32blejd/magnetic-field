@@ -13,7 +13,12 @@ export const COLORS = {
   amber: '#ffc21a',
   text: '#e6fbff',
   sub: '#5f9bb3',
+  green: '#4dff9a',
+  core: '#b98cff',
 } as const;
+
+/** Core tree branch colors (compass directions). N is red like a real compass needle (distinct from the anti-coin red). */
+export const BRANCH_COLOR = { N: '#ff5147', E: COLORS.amber, S: COLORS.cyan, W: COLORS.green, core: COLORS.core } as const;
 
 /** Tier color; Prism cycles through hues over time. */
 export function tierColor(tier: TierId, t: number, phase = 0): string {

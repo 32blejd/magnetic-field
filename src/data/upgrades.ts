@@ -23,19 +23,19 @@ const BASE_CROSS_TIME = 5 / 3 / 0.9 / 0.95; // ≈ 1.95 s
 
 /** Array order = panel order of the starting upgrades; the rest are appended as they unlock. */
 export const UPGRADES: readonly UpgradeDef[] = [
-  { id: 'value', max: 30, base: 8, growth: 1.58, unlockAt: 0,
+  { id: 'value', max: 30, base: 8, growth: 1.6, unlockAt: 0,
     fx: l => { const k = (20 * l) / 30; return Math.round((1 + k) * 1.15 ** k); } }, // 1 → 344 coins per pickup
-  { id: 'range', max: 20, base: 4, growth: 1.71, unlockAt: 0,
+  { id: 'range', max: 20, base: 4, growth: 1.73, unlockAt: 0,
     fx: l => 30 + 5 * l }, // 30 → 130 px
-  { id: 'spawn', max: 20, base: 4, growth: 1.71, unlockAt: 0,
+  { id: 'spawn', max: 20, base: 4, growth: 1.73, unlockAt: 0,
     fx: l => 1.14 ** l }, // 1.00 → 13.74 coins/s
-  { id: 'strength', max: 15, base: 6, growth: 2.04, unlockAt: 30,
+  { id: 'strength', max: 15, base: 6, growth: 2.07, unlockAt: 30,
     fx: l => 0.5 * 1.15 ** ((20 * l) / 15) }, // 0.50× → 8.18×
-  { id: 'capacity', max: 15, base: 10, growth: 2.11, unlockAt: 150,
+  { id: 'capacity', max: 15, base: 10, growth: 2.14, unlockAt: 150,
     fx: l => 8 + Math.round((40 * l) / 15) }, // 8 → 48 coins
   { id: 'rarity', max: 10, base: 50, growth: 2.2, steep: { from: 7, mult: 2 }, unlockAt: 1000,
     fx: l => 0.005 * l }, // +0% → +5% added to each rare tier's chance
-  { id: 'speed', max: 10, base: 15, growth: 2.94, unlockAt: 3000,
+  { id: 'speed', max: 10, base: 15, growth: 2.98, unlockAt: 3000,
     fx: l => BASE_CROSS_TIME / 0.96 ** ((15 * l) / 10) }, // 1.95 s → 3.60 s to cross half the board
 ];
 

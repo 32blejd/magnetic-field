@@ -1,8 +1,10 @@
 import { GOALS } from '../data/goals';
+import { GACHA, LODESTONE_BY_ID } from '../data/lodestones';
+import { NODE_BY_ID } from '../data/prestige';
 import { EVENTS } from '../data/tuning';
 import { UPGRADES, UPGRADE_IDS, type UpgradeId } from '../data/upgrades';
 import { createState } from '../game/state';
-import type { FeatureId, GameState } from '../game/types';
+import type { FeatureId, GameState, MetaState } from '../game/types';
 import { CURRENT_VERSION, migrate, type SaveData } from './migrations';
 
 export const SAVE_KEY = 'magnetic-field-save';
@@ -32,17 +34,39 @@ export function toSave(st: GameState, now = Date.now()): SaveData {
     stats: { ...st.stats, caught: { ...st.stats.caught } },
     nextEvent: st.nextEvent,
     pulseCd: st.pulseCd,
+    meta: { ...st.meta, nodes: { ...st.meta.nodes }, lodestones: { ...st.meta.lodestones } },
   };
 }
 
 const num = (v: unknown, fallback: number): number => (typeof v === 'number' && Number.isFinite(v) ? v : fallback);
 
+function metaFromSave(m: SaveData['meta']): MetaState {
+  const nodes: Record<string, number> = {};
+  for (const [id, lv] of Object.entries(m?.nodes ?? {})) {
+    const def = NODE_BY_ID[id];
+    if (def && def.id !== 'core' && typeof lv === 'number' && lv > 0) nodes[id] = Math.min(def.max, Math.floor(lv));
+  }
+  const lodestones: Record<string, number> = {};
+  for (const [id, lv] of Object.entries(m?.lodestones ?? {})) {
+    if (LODESTONE_BY_ID[id] && typeof lv === 'number' && lv > 0) lodestones[id] = Math.min(GACHA.maxLevel, Math.floor(lv));
+  }
+  return {
+    cores: Math.max(0, Math.floor(num(m?.cores, 0))),
+    coresEarned: Math.max(0, Math.floor(num(m?.coresEarned, 0))),
+    shifts: Math.max(0, Math.floor(num(m?.shifts, 0))),
+    nodes,
+    crystals: Math.max(0, Math.floor(num(m?.crystals, 0))),
+    lodestones,
+    pity: Math.max(0, Math.floor(num(m?.pity, 0))),
+  };
+}
+
 /** Builds a fresh state and overlays the saved data: unknown ids are ignored, levels clamped, missing fields defaulted. */
 export function fromSave(data: SaveData): GameState {
-  const st = createState(num(data.rng, 7) | 0);
+  const st = createState(num(data.rng, 7) | 0, metaFromSave(data.meta));
   st.t = Math.max(0, num(data.t, 0));
   st.money = Math.max(0, data.money);
-  st.totalEarned = Math.max(st.money, data.totalEarned);
+  st.totalEarned = Math.max(0, data.totalEarned); // may be below money: Head Start coins aren't "earned"
   for (const u of UPGRADES) {
     const lv = data.levels[u.id];
     if (typeof lv === 'number' && Number.isFinite(lv)) st.levels[u.id] = Math.max(0, Math.min(u.max, Math.floor(lv)));
