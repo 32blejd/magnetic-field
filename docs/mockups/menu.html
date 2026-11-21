@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Menu & Settings – UI Mockup</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #04050c; color: #e6fbff; font: 13px Consolas, "Courier New", monospace; }
+  body { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; }
+  nav { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+  nav button { background: #080c1e; color: #5f9bb3; border: 1px solid rgba(0,229,255,.35); border-radius: 6px; padding: 6px 12px; font: inherit; cursor: pointer; }
+  nav button.on { color: #00f0ff; border-color: #00f0ff; box-shadow: 0 0 10px rgba(0,240,255,.4); }
+  canvas { display: block; width: min(100vw, calc((100vh - 60px) * 16 / 9)); aspect-ratio: 16 / 9; }
+</style>
+</head>
+<body>
+<nav>
+  <button data-s="title" class="on">0 · Title (save exists)</button>
+  <button data-s="fresh">1 · Title (no save)</button>
+  <button data-s="newgame">2 · New game confirm</button>
+  <button data-s="run">3 · Run with ⚙ button</button>
+  <button data-s="pause">4 · Pause (Esc / ⚙)</button>
+  <button data-s="settings">5 · Settings</button>
+</nav>
+<canvas id="c"></canvas>
+<script>
+/* UI mockup only – not wired to the game. Logical view 960×540 like the game. Pick a screen with #title, #pause, … */
+const W = 960, H = 540, FONT = 'Consolas, "Courier New", monospace';
+const C = { bg: '#04050c', board: '#070a1a', panel: '#080c1e', cyan: '#00f0ff', magenta: '#ff2bd6', amber: '#ffc21a', green: '#4dff9a', red: '#ff3355', text: '#e6fbff', sub: '#5f9bb3', core: '#b98cff' };
+const BOARD = { x: 16, y: 16, w: 700, h: 446 }, PANEL = { x: 732, y: 16, w: 212, h: 508 }, BAR = { x: 16, y: 472, w: 700, h: 52 };
+
+const cv = document.getElementById('c'), dpr = Math.max(2, devicePixelRatio || 1);
+cv.width = W * dpr; cv.height = H * dpr;
+const ctx = cv.getContext('2d'); ctx.scale(dpr, dpr);
+const glow = (c, b) => { ctx.shadowColor = c; ctx.shadowBlur = b; }, noGlow = () => { ctx.shadowBlur = 0; };
+function hex(x, y, r, rot = Math.PI / 6) { ctx.beginPath(); for (let i = 0; i < 6; i++) { const a = rot + i * Math.PI / 3; ctx[i ? 'lineTo' : 'moveTo'](x + Math.cos(a) * r, y + Math.sin(a) * r); } ctx.closePath(); }
+function text(s, x, y, { size = 12, weight = 400, color = C.text, align = 'left', base = 'middle' } = {}) {
+  ctx.font = `${weight} ${size}px ${FONT}`; ctx.fillStyle = color; ctx.textAlign = align; ctx.textBaseline = base; ctx.fillText(s, x, y);
+  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+}
+function box(x, y, w, h, stroke, fill = C.panel, r = 10, blur = 16) {
+  glow(stroke, blur); ctx.fillStyle = fill; ctx.beginPath(); ctx.roundRect(x, y, w, h, r); ctx.fill();
+  ctx.strokeStyle = stroke; ctx.lineWidth = 1.2; ctx.stroke(); noGlow();
+}
+/** Menu button: primary = filled glow, danger = red, dim = disabled. */
+function button(x, y, w, h, label, { primary = false, danger = false, hover = false, dim = false, sub = null, key = null } = {}) {
+  const col = danger ? C.red : primary ? C.magenta : C.cyan;
+  ctx.globalAlpha = dim ? 0.35 : 1;
+  if (primary || hover) glow(col, hover ? 20 : 10);
+  ctx.fillStyle = primary ? col + (hover ? '40' : '1a') : hover ? 'rgba(0,240,255,.12)' : 'rgba(8,12,30,.85)';
+  ctx.beginPath(); ctx.roundRect(x, y, w, h, 8); ctx.fill();
+  ctx.strokeStyle = col; ctx.lineWidth = 1.3; ctx.stroke(); noGlow();
+  text(label, x + w / 2, y + h / 2 + (sub ? -6 : 1), { size: 14, weight: 700, color: primary && !danger ? '#ffd0f5' : col, align: 'center' });
+  if (sub) text(sub, x + w / 2, y + h / 2 + 11, { size: 10, color: C.sub, align: 'center' });
+  if (key) text(key, x + w - 12, y + h / 2 + (sub ? -6 : 1), { size: 10, color: C.sub, align: 'right' });
+  ctx.globalAlpha = 1;
+}
+
+/* ---------- backgrounds ---------- */
+function fieldBackdrop(t) { // title screen: a big slow magnet field with a few coins orbiting in
+  ctx.fillStyle = C.bg; ctx.fillRect(0, 0, W, H);
+  ctx.strokeStyle = 'rgba(0,229,255,.05)'; ctx.lineWidth = 1;
+  for (let x = 0; x <= W; x += 40) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
+  for (let y = 0; y <= H; y += 40) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
+  const cx = 300, cy = 270;
+  for (let i = 1; i <= 5; i++) { ctx.strokeStyle = `rgba(0,240,255,${0.18 - i * 0.03})`; ctx.beginPath(); ctx.arc(cx, cy, 40 * i + 6 * Math.sin(t + i), 0, Math.PI * 2); ctx.stroke(); }
+  glow(C.cyan, 24); ctx.fillStyle = C.cyan; ctx.beginPath(); ctx.arc(cx, cy, 12, 0, Math.PI * 2); ctx.fill(); noGlow();
+  const coins = [[0.3, 170, C.amber], [1.9, 120, C.cyan], [3.4, 210, C.cyan], [4.6, 90, C.amber], [5.6, 150, '#ff6be3']];
+  for (const [a, r, col] of coins) {
+    const x = cx + Math.cos(a + t * 0.3) * r, y = cy + Math.sin(a + t * 0.3) * r * 0.8;
+    glow(col, 12); ctx.fillStyle = col; hex(x, y, 9, t); ctx.fill(); noGlow();
+  }
+}
+function gameBackdrop() { // a frozen run behind the pause menu
+  ctx.fillStyle = C.bg; ctx.fillRect(0, 0, W, H);
+  box(BOARD.x, BOARD.y, BOARD.w, BOARD.h, 'rgba(0,229,255,.5)', C.board, 10, 8);
+  text('RUN 6:41   CATCH 76%   MISSED 812   BEST COMBO 214', BOARD.x + 12, BOARD.y + 14, { size: 11, color: C.sub });
+  for (const [x, y, col] of [[200, 160, C.cyan], [420, 300, C.cyan], [560, 140, C.amber], [300, 380, C.cyan], [610, 330, '#ff6be3']]) { glow(col, 10); ctx.fillStyle = col; hex(x, y, 10); ctx.fill(); noGlow(); }
+  ctx.strokeStyle = 'rgba(0,240,255,.4)'; ctx.beginPath(); ctx.arc(380, 250, 70, 0, Math.PI * 2); ctx.stroke();
+  glow(C.cyan, 14); ctx.fillStyle = C.cyan; ctx.beginPath(); ctx.arc(380, 250, 10, 0, Math.PI * 2); ctx.fill(); noGlow();
+  box(BAR.x, BAR.y, BAR.w, BAR.h, 'rgba(255,43,214,.5)', C.panel, 10, 6);
+  text('POLARITY SHIFT', BAR.x + 16, BAR.y + 18, { size: 11, weight: 700, color: C.magenta });
+  text('Earn 2.5M this run · 640k', BAR.x + 16, BAR.y + 35, { size: 11, color: C.sub });
+  box(PANEL.x, PANEL.y, PANEL.w, PANEL.h, '#00e5ff', C.panel, 10, 10);
+  glow(C.cyan, 8); ctx.fillStyle = C.cyan; hex(PANEL.x + 26, PANEL.y + 33, 8); ctx.fill(); noGlow();
+  text('48,210', PANEL.x + 42, PANEL.y + 33, { size: 22, weight: 600 });
+  text('+1,204.5 / s', PANEL.x + 42, PANEL.y + 54, { size: 12, color: C.sub });
+  text('UPGRADES', PANEL.x + 16, PANEL.y + 82, { size: 11, weight: 700, color: C.magenta });
+  ['VALUE', 'RANGE', 'SPAWN RATE', 'STRENGTH', 'CAPACITY', 'RARITY', 'COIN SPEED'].forEach((n, i) => {
+    const y = PANEL.y + 96 + i * 58;
+    ctx.fillStyle = 'rgba(0,229,255,.05)'; ctx.beginPath(); ctx.roundRect(PANEL.x + 10, y, PANEL.w - 20, 54, 7); ctx.fill();
+    text(n, PANEL.x + 20, y + 15, { size: 13, weight: 600 });
+    text(`Lv ${12 - i}/20  [${i + 1}]`, PANEL.x + 20, y + 32, { size: 10, color: C.sub });
+    ctx.strokeStyle = C.cyan; ctx.beginPath(); ctx.roundRect(PANEL.x + PANEL.w - 82, y + 14, 62, 26, 6); ctx.stroke();
+    text(`${(i + 2) * 3}.1k`, PANEL.x + PANEL.w - 51, y + 28, { size: 12, weight: 700, color: C.cyan, align: 'center' });
+  });
+}
+/** ⚙ button – top-right corner of the upgrade panel header. */
+const GEAR = { x: PANEL.x + PANEL.w - 34, y: PANEL.y + 10, w: 24, h: 24 };
+function gear(hover) {
+  const { x, y, w, h } = GEAR, cx = x + w / 2, cy = y + h / 2;
+  if (hover) { glow(C.cyan, 12); ctx.fillStyle = 'rgba(0,240,255,.15)'; ctx.beginPath(); ctx.roundRect(x, y, w, h, 6); ctx.fill(); noGlow(); }
+  ctx.strokeStyle = hover ? C.cyan : C.sub; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.roundRect(x, y, w, h, 6); ctx.stroke();
+  ctx.fillStyle = hover ? C.cyan : C.sub;
+  for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4; ctx.save(); ctx.translate(cx, cy); ctx.rotate(a); ctx.fillRect(-1.6, -8, 3.2, 4); ctx.restore(); }
+  ctx.beginPath(); ctx.arc(cx, cy, 5.5, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = C.panel; ctx.beginPath(); ctx.arc(cx, cy, 2.4, 0, Math.PI * 2); ctx.fill();
+}
+const dim = () => { ctx.fillStyle = 'rgba(2,3,10,.72)'; ctx.fillRect(0, 0, W, H); };
+
+/* ---------- screens ---------- */
+function titleScreen(t, hasSave) {
+  fieldBackdrop(t);
+  glow(C.cyan, 20); text('MAGNETIC', 560, 130, { size: 46, weight: 700, color: C.cyan }); noGlow();
+  glow(C.magenta, 20); text('FIELD', 560, 182, { size: 46, weight: 700, color: C.magenta }); noGlow();
+  text('pull in the coins · shift the poles', 562, 218, { size: 12, color: C.sub });
+  let y = 262;
+  if (hasSave) { button(560, y, 300, 50, 'CONTINUE', { primary: true, hover: true, sub: 'Shift 3 · 42 ◆ · run 6:41 · saved 2 min ago', key: '[Enter]' }); y += 62; }
+  button(560, y, 300, 40, 'NEW GAME', { primary: !hasSave, sub: null }); y += 52;
+  button(560, y, 300, 40, 'SETTINGS'); y += 52;
+  text('v0.6 · autosaves every 30 s', 560, 512, { size: 10, color: 'rgba(95,155,179,.6)' });
+}
+function newGameConfirm(t) {
+  titleScreen(t, true); dim();
+  const M = { x: 270, y: 140, w: 420, h: 230 };
+  box(M.x, M.y, M.w, M.h, C.red, C.panel, 12, 22);
+  const cx = M.x + M.w / 2;
+  glow(C.red, 14); text('START A NEW GAME?', cx, M.y + 40, { size: 20, weight: 700, color: C.red, align: 'center' }); noGlow();
+  text('Your current save will be erased:', cx, M.y + 80, { size: 12, align: 'center' });
+  text('Shift 3 · 42 ◆ Cores · 11 Lodestones · 37 min played', cx, M.y + 102, { size: 12, weight: 700, color: C.core, align: 'center' });
+  text("This can't be undone.", cx, M.y + 130, { size: 11, color: C.sub, align: 'center' });
+  button(M.x + 30, M.y + M.h - 64, 170, 38, 'ERASE & START', { danger: true });
+  button(M.x + M.w - 200, M.y + M.h - 64, 170, 38, 'CANCEL', { hover: true, key: '[Esc]' });
+}
+function runScreen(hoverGear) {
+  gameBackdrop(); gear(hoverGear);
+  if (hoverGear) { // hint bubble left of the panel
+    box(PANEL.x - 150, GEAR.y, 142, 26, C.cyan, 'rgba(8,12,30,.96)', 7, 8);
+    text('MENU  [Esc]', PANEL.x - 79, GEAR.y + 14, { size: 11, weight: 700, color: C.cyan, align: 'center' });
+  }
+}
+function pauseScreen() {
+  gameBackdrop(); gear(false); dim();
+  const M = { x: 330, y: 120, w: 300, h: 290 }, cx = M.x + M.w / 2;
+  box(M.x, M.y, M.w, M.h, C.cyan, C.panel, 12, 20);
+  glow(C.cyan, 14); text('PAUSED', cx, M.y + 38, { size: 22, weight: 700, color: C.cyan, align: 'center' }); noGlow();
+  text('the run is frozen while this is open', cx, M.y + 62, { size: 10, color: C.sub, align: 'center' });
+  button(M.x + 30, M.y + 86, M.w - 60, 42, 'RESUME', { primary: true, hover: true, key: '[Esc]' });
+  button(M.x + 30, M.y + 140, M.w - 60, 42, 'SETTINGS');
+  button(M.x + 30, M.y + 194, M.w - 60, 42, 'BACK TO MENU');
+  text('progress is saved when you leave', cx, M.y + 262, { size: 10, color: C.sub, align: 'center' });
+}
+function slider(x, y, label, value, placeholder) {
+  text(label, x, y, { size: 12, weight: 700, color: placeholder ? 'rgba(230,251,255,.45)' : C.text });
+  const sx = x + 170, w = 200;
+  ctx.fillStyle = 'rgba(95,155,179,.25)'; ctx.beginPath(); ctx.roundRect(sx, y - 3, w, 6, 3); ctx.fill();
+  ctx.globalAlpha = placeholder ? 0.45 : 1;
+  glow(C.cyan, 8); ctx.fillStyle = C.cyan; ctx.beginPath(); ctx.roundRect(sx, y - 3, w * value, 6, 3); ctx.fill();
+  ctx.beginPath(); ctx.arc(sx + w * value, y, 7, 0, Math.PI * 2); ctx.fill(); noGlow();
+  ctx.globalAlpha = 1;
+  text(`${Math.round(value * 100)}%`, sx + w + 16, y, { size: 12, color: placeholder ? C.sub : C.text });
+}
+function toggle(x, y, label, on, note) {
+  text(label, x, y, { size: 12, weight: 700 });
+  const bx = x + 170;
+  ctx.fillStyle = on ? C.green + '30' : 'rgba(95,155,179,.15)'; ctx.beginPath(); ctx.roundRect(bx, y - 10, 44, 20, 10); ctx.fill();
+  ctx.strokeStyle = on ? C.green : C.sub; ctx.lineWidth = 1.2; ctx.stroke();
+  if (on) glow(C.green, 8);
+  ctx.fillStyle = on ? C.green : C.sub; ctx.beginPath(); ctx.arc(on ? bx + 34 : bx + 10, y, 7, 0, Math.PI * 2); ctx.fill(); noGlow();
+  text(on ? 'ON' : 'OFF', bx + 56, y, { size: 12, color: on ? C.green : C.sub });
+  if (note) text(note, bx + 100, y, { size: 10, color: C.sub });
+}
+function settingsScreen() {
+  gameBackdrop(); gear(false); dim();
+  const M = { x: 230, y: 70, w: 500, h: 400 }, cx = M.x + M.w / 2, x = M.x + 40;
+  box(M.x, M.y, M.w, M.h, C.cyan, C.panel, 12, 20);
+  glow(C.cyan, 14); text('SETTINGS', cx, M.y + 38, { size: 22, weight: 700, color: C.cyan, align: 'center' }); noGlow();
+  text('SOUND', x, M.y + 80, { size: 11, weight: 700, color: C.magenta });
+  text('coming soon – sliders are saved already', x + 70, M.y + 80, { size: 10, color: C.sub });
+  slider(x, M.y + 110, 'MASTER VOLUME', 0.8, true);
+  slider(x, M.y + 145, 'MUSIC', 0.6, true);
+  slider(x, M.y + 180, 'EFFECTS', 0.8, true);
+  text('DISPLAY', x, M.y + 226, { size: 11, weight: 700, color: C.magenta });
+  toggle(x, M.y + 256, 'SCREEN SHAKE', true, 'anti-coin hits');
+  toggle(x, M.y + 291, 'FULLSCREEN', false, '[F11]');
+  button(cx - 110, M.y + M.h - 62, 220, 38, '◀  BACK', { hover: true, key: '[Esc]' });
+}
+
+/* ---------- loop ---------- */
+let screen = (location.hash || '#title').slice(1);
+const draw = t => {
+  ({ title: () => titleScreen(t, true), fresh: () => titleScreen(t, false), newgame: () => newGameConfirm(t),
+     run: () => runScreen(true), pause: pauseScreen, settings: settingsScreen }[screen] ?? (() => titleScreen(t, true)))();
+};
+document.querySelectorAll('nav button').forEach(b => {
+  b.classList.toggle('on', b.dataset.s === screen);
+  b.onclick = () => { screen = b.dataset.s; location.hash = screen; document.querySelectorAll('nav button').forEach(x => x.classList.toggle('on', x === b)); };
+});
+const frame = now => { draw(now / 1000); requestAnimationFrame(frame); };
+if (location.search.includes('shot')) draw(2); // ?shot: one static frame (for headless screenshots)
+else requestAnimationFrame(frame);
+</script>
+</body>
+</html>
