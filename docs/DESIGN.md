@@ -220,12 +220,15 @@ Requirement: **earn the run goal = 1M × (1 + 1.5 × shifts)** – 1M, 2.5M, 4M,
 1. **From 100k earned** a `◆ CORE TREE [T]` button appears in the prestige bar: the tree can be **browsed** (read-only preview) mid-run.
 2. **At 1M** the bar glows and shows `SHIFT POLARITY [P]` with the Cores you'd get now and the earnings needed for one more (`+1 ◆ at 1.21M`) – a Core hint, not the next run's goal.
 3. Shift opens the **Core tree** with this run's Cores added. The player places them; choices are **tentative** (UNDO / NOT YET revert them).
+   **Respec is free at every shift:** right-click an owned node to refund one level (only if no owned node would lose its last owned parent – leaves first), or `RESET TREE` to refund the whole tree. Refunds go into the same draft, so UNDO brings the saved tree back and nothing is final until the confirm; the confirm dialog shows `Refunded X ◆ · spent Y ◆ …`.
 4. `SHIFT & START RUN` shows a **confirm dialog over the tree**: Cores earned, spent and saved, what resets (coins, upgrade levels, unlocks, mini-goals, run stats) and what's kept (Cores, Core tree, lifetime stats, settings), and the **next run's goal** (`NEXT RUN GOAL: EARN 2.5M`).
 5. Confirm → "polarity flip" animation from the Core → a new run starts; its banner repeats the new goal (so does the Auto-shift banner).
 
 The run is paused while the tree or the confirm dialog is open. Keys: `T` tree preview, `P` shift, `Esc` back, `Enter` confirm. After the first shift, "NEW UPGRADE" / feature banners are not repeated (rows still flash); the anti-coin warning still shows.
 
 **Core tree** – nodes revealed next to owned ones; drag to pan, scroll to zoom. Four branches on real compass directions (N red like a compass needle), each b1 → b2/b3 → b4/b5/b6 → keystone. Data: `src/data/prestige.ts`, effects: `src/game/prestige.ts`.
+
+Whole tree: **246 ◆** (~25 shifts at ~10 Cores each). Keystones and the priciest automation levels were cut ~35% (299 → 246) so long-term goals come sooner; the cheap starter nodes kept their costs. Cheapest path to a first keystone: Satellites 1 = 15 ◆, Interest 17, Void 19, Drones 1 = 20 (2 shifts).
 
 | Node | Effect | Levels | Cost (◆ per level) | Status |
 |---|---|---|---|---|
@@ -237,7 +240,7 @@ The run is paused while the tree or the confirm dialog is open. Keys: `T` tree p
 | Combo Shield | once every 30 s an anti-coin doesn't reset the combo | 1 | 5 | ✅ |
 | Grounding | anti-coin short circuit −0.4 s / lv | 2 | 3 · 5 | ✅ |
 | Combo Limit | max combo ×2 → ×2.5 | 1 | 5 | ✅ |
-| Satellites (keystone) | mini-magnets orbiting the cursor, +1 / lv | 3 | 10 · 15 · 20 | ✅ |
+| Satellites (keystone) | mini-magnets orbiting the cursor, +1 / lv | 3 | 7 · 10 · 13 | ✅ |
 | **E · Coins & events** (amber) | | | | |
 | Lucky Charge | +1% Gold and Prism chance / lv | 3 | 2 · 3 · 4 | ✅ |
 | Prism Resonance | Prism worth ×4 (speed stays ×3) | 1 | 6 | ✅ |
@@ -245,23 +248,23 @@ The run is paused while the tree or the confirm dialog is open. Keys: `T` tree p
 | Chain Reaction | catching a Prism also collects every coin within 80 px | 1 | 6 | ✅ |
 | Meteor Shower | new event: a line of 12 fast coins sweeps in from one edge | 1 | 5 | ✅ |
 | Golden Fountain | Fountain events spray Gold only | 1 | 5 | ✅ |
-| Void Coin (keystone) | new ×10 coin tier (0.3%) | 1 | 15 | ✅ |
+| Void Coin (keystone) | new ×10 coin tier (0.3%) | 1 | 10 | ✅ |
 | **S · Economy** (cyan) | | | | |
 | Dividend | +15% coin value / lv | 5 | 1 · 2 · 3 · 4 · 5 | ✅ |
 | Head Start | start runs with 500 / 5k / 50k coins | 3 | 2 · 4 · 6 | ✅ |
 | Discount | upgrades −8% cost / lv | 3 | 2 · 4 · 6 | ✅ |
 | Fast Track | upgrades, Combo, Pulse unlock at half the earnings | 1 | 4 | ✅ |
 | Compound | +1% value per run minute, max +30% | 1 | 5 | ✅ |
-| Core Yield | +20% Cores per shift / lv | 2 | 6 · 10 | ✅ |
-| Interest (keystone) | +1% of held coins every 10 s, max 10 s of perfect income | 1 | 14 | ✅ |
+| Core Yield | +20% Cores per shift / lv | 2 | 6 · 7 | ✅ |
+| Interest (keystone) | +1% of held coins every 10 s, max 10 s of perfect income | 1 | 9 | ✅ |
 | **W · Automation** (green) | | | | |
 | Bulk Buy | Shift + key/click buys max levels | 1 | 1 | ✅ |
 | Auto-buyer | buys upgrades (Value first when it's the better deal), max 4 levels/s; can be paused | 1 | 6 | ✅ |
 | Magnet Memory | field keeps working 1 s after leaving the board | 1 | 3 | ✅ |
-| Auto-pulse | Pulse fires when ready and 5+ coins are within Pulse range | 1 | 8 | ✅ |
+| Auto-pulse | Pulse fires when ready and 5+ coins are within Pulse range | 1 | 5 | ✅ |
 | Homing Prisms | Prism coins steer toward the magnet from anywhere | 1 | 4 | ✅ |
-| Auto-shift | shift automatically at 1× / 2× / 4× the goal; Cores are banked | 1 | 12 | ✅ |
-| Drones (keystone) | autonomous magnets, +1 / lv | 3 | 12 · 18 · 24 | ✅ |
+| Auto-shift | shift automatically at 1× / 2× / 4× the goal; Cores are banked | 1 | 8 | ✅ |
+| Drones (keystone) | autonomous magnets, +1 / lv | 3 | 8 · 12 · 16 | ✅ |
 
 ### Keystones and automation (M5)
 
@@ -310,4 +313,4 @@ Work on `npm run dev` / `npm run preview`: `?nosave=1` don't load/write the save
 - Combo stays at ×2 for most of the mid/late game for a good player – maybe raise the cap via upgrades or prestige.
 - Miss sparks at the board edge may get noisy late game (many misses per second).
 - Drones are very strong for idle play: 3 Drones + Auto-buyer earn ~84% of an active player's income with nobody at the mouse. Fine for "the game plays itself", or tune down (e.g. Drone speed 140 → 100 px/s or field 45% → 35%) so active play stays clearly better? Needs a target.
-- Keystones give only 0…−8% run time in active play (Satellites 3: −4% for 45 Cores) – consider buffing them in the late-run balance pass.
+- Keystones give only 0…−8% run time in active play (Satellites 3: −4% for 30 Cores) – consider buffing them in the late-run balance pass.

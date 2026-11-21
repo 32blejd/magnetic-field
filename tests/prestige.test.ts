@@ -4,7 +4,7 @@ import { PULSE } from '../src/data/tuning';
 import { UPGRADE_BY_ID } from '../src/data/upgrades';
 import { triggerPulse, upgradeUnlockAt } from '../src/game/abilities';
 import {
-  bonuses, buyNode, canBuyNode, canShift, commitShift, coresFor, draftSummary, nextCoreAt, nextShiftGoal, nodeVisible, shiftGoal, startDraft, treeUnlocked,
+  bonuses, buyNode, canBuyNode, canShift, commitShift, coresFor, draftSummary, canRefundNode, refundNode, resetDraft, nextCoreAt, nextShiftGoal, nodeVisible, shiftGoal, startDraft, treeUnlocked,
 } from '../src/game/prestige';
 import { nextCost } from '../src/game/shop';
 import { createState, emptyMeta } from '../src/game/state';
@@ -74,9 +74,38 @@ describe('Polarity Shift', () => {
     buyNode(draft, NODE_BY_ID.Sb1!);
     buyNode(draft, NODE_BY_ID.Sb1!);
     expect(draft.cores).toBe(7);
-    expect(draftSummary(st, draft)).toEqual({ spent: 3, bought: 1 });
+    expect(draftSummary(st, draft)).toEqual({ spent: 3, refunded: 0, bought: 1 });
     expect(st.meta.nodes).toEqual({}); // nothing saved yet
     expect(startDraft(st).cores).toBe(10); // UNDO = a fresh draft
+  });
+
+  it('refunds single levels for free, leaves first', () => {
+    const st = withNodes({ Nb1: 2, Nb2: 1, Nb3: 1, Nb5: 1 }); // Nb5 hangs on Nb2 or Nb3
+    const draft = startDraft(st);
+    const N = (id: string) => NODE_BY_ID[id]!;
+    expect(canRefundNode(draft, N('core'))).toBe(false);
+    expect(canRefundNode(draft, N('Nb4'))).toBe(false); // not owned
+    expect(refundNode(draft, N('Nb1'))).toBe(true); // level 2 → 1 is always fine
+    expect(draft).toMatchObject({ cores: 2, nodes: { Nb1: 1 } });
+    expect(canRefundNode(draft, N('Nb1'))).toBe(false); // Nb2/Nb3 would float
+    expect(refundNode(draft, N('Nb2'))).toBe(true); // Nb5 still hangs on Nb3
+    expect(canRefundNode(draft, N('Nb3'))).toBe(false); // …but now only on Nb3
+    expect(refundNode(draft, N('Nb5'))).toBe(true);
+    expect(refundNode(draft, N('Nb3'))).toBe(true);
+    expect(refundNode(draft, N('Nb1'))).toBe(true);
+    expect(draft).toMatchObject({ cores: 2 + 2 + 3 + 2 + 1, nodes: {} });
+  });
+
+  it('resets the whole tree into the draft, and the summary counts refunds', () => {
+    const st = withNodes({ Sb1: 3, Sb2: 1, Wkey: 2 });
+    st.totalEarned = 1_000_000;
+    const draft = startDraft(st); // 10 gained
+    expect(resetDraft(draft)).toBe(1 + 2 + 3 + 2 + 8 + 12);
+    expect(draft).toMatchObject({ nodes: {}, cores: 10 + 28 });
+    buyNode(draft, NODE_BY_ID.Nb1!);
+    expect(draftSummary(st, draft)).toEqual({ spent: 1, refunded: 28, bought: 1 });
+    commitShift(st, draft);
+    expect(st.meta).toMatchObject({ cores: 37, nodes: { Nb1: 1 } });
   });
 
   it('resets the run but keeps Cores and the tree', () => {

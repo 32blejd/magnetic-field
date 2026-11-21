@@ -9,7 +9,7 @@ export interface InputHandlers {
   onUp(p: Vec, shift: boolean): void;
   onWheel(p: Vec, deltaY: number): void;
   /** Right click. */
-  onRightClick(): void;
+  onRightClick(p: Vec): void;
   /** `code` is KeyboardEvent.code (e.g. "Space", "Digit3", "KeyT", "Escape"). Return true to prevent the default. */
   onKey(code: string, shift: boolean): boolean;
 }
@@ -30,7 +30,7 @@ export function setupInput(canvas: HTMLCanvasElement, h: InputHandlers): void {
   canvas.addEventListener('mousedown', e => { if (e.button === 0) h.onDown(toView(e)); });
   window.addEventListener('mouseup', e => { if (e.button === 0) h.onUp(toView(e), e.shiftKey); });
   canvas.addEventListener('wheel', e => { e.preventDefault(); h.onWheel(toView(e), e.deltaY); }, { passive: false });
-  canvas.addEventListener('contextmenu', e => { e.preventDefault(); h.onRightClick(); });
+  canvas.addEventListener('contextmenu', e => { e.preventDefault(); h.onRightClick(toView(e)); });
   window.addEventListener('keydown', e => { if (h.onKey(e.code, e.shiftKey)) e.preventDefault(); });
 }
 

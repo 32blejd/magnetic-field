@@ -65,7 +65,7 @@ export const NODES: readonly NodeDef[] = [
     b4: { max: 1, cost: [5], effect: 'comboShield', icon: '⛉' },
     b5: { max: 2, cost: [3, 5], effect: 'stun', icon: '⏚' },
     b6: { max: 1, cost: [5], effect: 'comboMax', icon: '×' },
-    key: { max: 3, cost: [10, 15, 20], effect: 'satellites', icon: '◎' },
+    key: { max: 3, cost: [7, 10, 13], effect: 'satellites', icon: '◎' },
   }),
   ...branch('E', {
     b1: { max: 3, cost: [2, 3, 4], effect: 'rareChance', icon: '%' },
@@ -74,7 +74,7 @@ export const NODES: readonly NodeDef[] = [
     b4: { max: 1, cost: [6], effect: 'chainReaction', icon: '⚡' },
     b5: { max: 1, cost: [5], effect: 'meteorShower', icon: '☄' },
     b6: { max: 1, cost: [5], effect: 'goldenFountain', icon: '✺' },
-    key: { max: 1, cost: [15], effect: 'voidCoin', icon: '●' },
+    key: { max: 1, cost: [10], effect: 'voidCoin', icon: '●' },
   }),
   ...branch('S', {
     b1: { max: 5, cost: [1, 2, 3, 4, 5], effect: 'value', icon: '$+' },
@@ -82,17 +82,17 @@ export const NODES: readonly NodeDef[] = [
     b3: { max: 3, cost: [2, 4, 6], effect: 'discount', icon: '−%' },
     b4: { max: 1, cost: [4], effect: 'fastTrack', icon: '»' },
     b5: { max: 1, cost: [5], effect: 'compound', icon: '↗' },
-    b6: { max: 2, cost: [6, 10], effect: 'coreYield', icon: '◆+' },
-    key: { max: 1, cost: [14], effect: 'interest', icon: '%$' },
+    b6: { max: 2, cost: [6, 7], effect: 'coreYield', icon: '◆+' },
+    key: { max: 1, cost: [9], effect: 'interest', icon: '%$' },
   }),
   ...branch('W', {
     b1: { max: 1, cost: [1], effect: 'bulkBuy', icon: '≡' },
     b2: { max: 1, cost: [6], effect: 'autoBuy', icon: 'A' },
     b3: { max: 1, cost: [3], effect: 'magnetMemory', icon: 'M' },
-    b4: { max: 1, cost: [8], effect: 'autoPulse', icon: '⟳' },
+    b4: { max: 1, cost: [5], effect: 'autoPulse', icon: '⟳' },
     b5: { max: 1, cost: [4], effect: 'homingPrisms', icon: '◇→' },
-    b6: { max: 1, cost: [12], effect: 'autoShift', icon: '⇄' },
-    key: { max: 3, cost: [12, 18, 24], effect: 'drones', icon: '✦' },
+    b6: { max: 1, cost: [8], effect: 'autoShift', icon: '⇄' },
+    key: { max: 3, cost: [8, 12, 16], effect: 'drones', icon: '✦' },
   }),
 ];
 

@@ -67,7 +67,8 @@ const BTN = (x: number, w: number): Rect => ({ x: VIEW.w - x, y: VIEW.h - 50, w,
 export const TREE_BUTTONS = {
   primary: BTN(216, 200), // SHIFT & START RUN / BACK TO RUN
   undo: BTN(316, 92),
-  notYet: BTN(436, 112),
+  reset: BTN(436, 112),
+  notYet: BTN(556, 112),
 } as const;
 
 /* confirm dialog */

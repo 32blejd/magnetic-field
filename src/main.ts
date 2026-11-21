@@ -3,7 +3,8 @@ import { BOARD, STEP, VIEW } from './data/tuning';
 import { triggerPulse } from './game/abilities';
 import { magnetronUnlocked, pullMany } from './game/lodestones';
 import {
-  autoShiftDue, bonuses, buyNode, canShift, commitAutoShift, commitShift, nextAutoShiftTarget, shiftGoal, startDraft, treeUnlocked,
+  autoShiftDue, bonuses, buyNode, canShift, commitAutoShift, commitShift, nextAutoShiftTarget, refundNode, resetDraft, shiftGoal, startDraft,
+  treeUnlocked,
 } from './game/prestige';
 import { buy, buyMax, canBuy } from './game/shop';
 import { step } from './game/simulation';
@@ -132,10 +133,11 @@ function pressPrestigeButton(): void {
   const action = prestigeButtonAction(st);
   if (action) openTree(action);
 }
-function treeAction(action: 'back' | 'confirm' | 'undo' | 'notYet'): void {
+function treeAction(action: 'back' | 'confirm' | 'undo' | 'reset' | 'notYet'): void {
   if (!tree) return;
   if (action === 'back' || action === 'notYet') closeTree();
   else if (action === 'confirm') screen = 'confirm';
+  else if (action === 'reset') { if (tree.draft) resetDraft(tree.draft); } // free respec; UNDO brings the saved tree back
   else tree.draft = startDraft(st);
 }
 function updateCursorStyle(p: Vec): void {
@@ -200,7 +202,13 @@ setupInput(canvas, {
     }
   },
   onWheel(p, dy) { if (screen === 'tree' && tree) zoomAt(tree, p, dy < 0 ? 1.1 : 1 / 1.1); },
-  onRightClick() { if (screen === 'run') pulse(); },
+  onRightClick(p) {
+    if (screen === 'run') pulse();
+    else if (screen === 'tree' && tree?.mode === 'shift' && tree.draft) { // refund one level of the node under the cursor
+      const n = nodeAt(st, tree, p);
+      if (n && refundNode(tree.draft, n)) tree.flashes.push({ id: n.id, life: 0.5 });
+    }
+  },
   onKey(code, shift) {
     if (screen === 'run') {
       if (code === 'Space') { pulse(); return true; }

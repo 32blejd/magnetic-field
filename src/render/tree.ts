@@ -1,7 +1,7 @@
 /* Core tree screen (browse / spend Cores), the confirm dialog over it, and the polarity-flip animation. */
 import { BRANCHES, NODES, parentsOf, type NodeDef } from '../data/prestige';
 import { VIEW } from '../data/tuning';
-import { canBuyNode, draftSummary, nodeCost, nodeLevel, nodeMaxed, nextShiftGoal, nodeVisible, shiftGoal } from '../game/prestige';
+import { canBuyNode, canRefundNode, draftSummary, nodeCost, nodeLevel, nodeMaxed, nextShiftGoal, nodeVisible, shiftGoal } from '../game/prestige';
 import type { GameState, Vec } from '../game/types';
 import { formatNumber, formatShort } from '../ui/format';
 import { inRect, type Rect } from '../ui/layout';
@@ -19,12 +19,13 @@ const shownNodes = (st: GameState, v: TreeView) => v.draft?.nodes ?? st.meta.nod
 const shownCores = (st: GameState, v: TreeView) => v.draft?.cores ?? st.meta.cores;
 const buyable = (v: TreeView, def: NodeDef) => v.mode === 'shift' && !!v.draft && canBuyNode(v.draft, def);
 
-export interface TreeButton { rect: Rect; label: string; primary: boolean; action: 'back' | 'confirm' | 'undo' | 'notYet' }
+export interface TreeButton { rect: Rect; label: string; primary: boolean; action: 'back' | 'confirm' | 'undo' | 'reset' | 'notYet' }
 export function treeButtons(v: TreeView): TreeButton[] {
   if (v.mode === 'browse') return [{ rect: TREE_BUTTONS.primary, label: S.treeBack, primary: true, action: 'back' }];
   return [
     { rect: TREE_BUTTONS.primary, label: S.treeShiftStart, primary: true, action: 'confirm' },
     { rect: TREE_BUTTONS.undo, label: S.treeUndo, primary: false, action: 'undo' },
+    { rect: TREE_BUTTONS.reset, label: S.treeReset, primary: false, action: 'reset' },
     { rect: TREE_BUTTONS.notYet, label: S.treeNotYet, primary: false, action: 'notYet' },
   ];
 }
@@ -168,8 +169,8 @@ function drawHud(ctx: Ctx, st: GameState, v: TreeView, cursor: Vec | null): void
   });
   ctx.textBaseline = 'alphabetic';
   ctx.fillStyle = 'rgba(95,155,179,.75)'; ctx.font = `9px ${FONT}`;
-  ctx.fillText(v.mode === 'browse' ? S.treeHintBrowse : S.treeHintBuy, 20, H - 112);
-  ctx.fillText(S.treeHintReveal, 20, H - 100);
+  const hints = v.mode === 'browse' ? [S.treeHintBrowse, S.treeHintReveal] : [S.treeHintBuy, S.treeHintDrag, S.treeHintReveal];
+  hints.forEach((l, i) => ctx.fillText(l, 20, H - 112 + i * 11));
 
   for (const b of treeButtons(v)) drawButton(ctx, b.rect, b.label, b.primary, !!cursor && inRect(cursor, b.rect));
 }
@@ -180,7 +181,11 @@ function drawTooltip(ctx: Ctx, st: GameState, v: TreeView, cursor: Vec): void {
   const nodes = shownNodes(st, v), cores = shownCores(st, v), lv = nodeLevel(nodes, n.id), col = BRANCH_COLOR[n.branch], w = 250;
   const text = NODE_TEXT[n.id]!;
   ctx.font = `11px ${FONT}`;
-  const lines = wrapText(ctx, text.desc, w - 24), h = 66 + lines.length * 15;
+  const lines = wrapText(ctx, text.desc, w - 24);
+  // shift screen: how to refund an owned node
+  const refund = v.mode === 'shift' && v.draft && n.id !== 'core' && lv > 0
+    ? canRefundNode(v.draft, n) ? S.nodeRefund(formatNumber(n.cost[lv - 1]!)) : S.nodeRefundBlocked : null;
+  const h = 66 + lines.length * 15 + (refund ? 14 : 0);
   let x = cursor.x + 18, y = cursor.y + 14;
   if (x + w > W - 8) x = cursor.x - w - 18;
   if (y + h > H - 8) y = H - h - 8;
@@ -199,7 +204,9 @@ function drawTooltip(ctx: Ctx, st: GameState, v: TreeView, cursor: Vec): void {
     foot = S.nodeNext(formatNumber(lv), formatNumber(n.max), formatNumber(cost)) + (v.mode === 'browse' ? S.nodePreview : poor ? S.nodePoor : '');
     footCol = v.mode === 'browse' ? COLORS.sub : poor ? COLORS.red : COLORS.core;
   }
-  ctx.fillStyle = footCol; ctx.font = `700 10px ${FONT}`; ctx.fillText(foot, x + 12, y + h - 18);
+  const footY = y + h - 18 - (refund ? 14 : 0);
+  ctx.fillStyle = footCol; ctx.font = `700 10px ${FONT}`; ctx.fillText(foot, x + 12, footY);
+  if (refund) { ctx.fillStyle = COLORS.sub; ctx.font = `10px ${FONT}`; ctx.fillText(refund, x + 12, footY + 14); }
   ctx.textBaseline = 'alphabetic';
 }
 
@@ -215,7 +222,7 @@ export function drawConfirm(ctx: Ctx, st: GameState, v: TreeView, cursor: Vec | 
   drawTree(ctx, st, { ...v, hover: null }, null, t);
   const M = CONFIRM, draft = v.draft;
   if (!draft) return;
-  const { spent, bought } = draftSummary(st, draft);
+  const { spent, refunded, bought } = draftSummary(st, draft);
   ctx.fillStyle = 'rgba(2,3,10,.72)'; ctx.fillRect(0, 0, W, H);
   glow(ctx, COLORS.magenta, 22); ctx.fillStyle = COLORS.panel; ctx.beginPath(); ctx.roundRect(M.x, M.y, M.w, M.h, 12); ctx.fill();
   ctx.strokeStyle = COLORS.magenta; ctx.lineWidth = 1.2; ctx.stroke(); noGlow(ctx);
@@ -224,7 +231,8 @@ export function drawConfirm(ctx: Ctx, st: GameState, v: TreeView, cursor: Vec | 
   glow(ctx, COLORS.magenta, 14); ctx.fillStyle = COLORS.magenta; ctx.font = `700 20px ${FONT}`; ctx.fillText(S.confirmTitle, cx, M.y + 40); noGlow(ctx);
   glow(ctx, COLORS.core, 14); ctx.fillStyle = COLORS.core; ctx.font = `700 24px ${FONT}`; ctx.fillText(S.confirmGain(formatNumber(draft.gained)), cx, M.y + 78); noGlow(ctx);
   ctx.fillStyle = COLORS.text; ctx.font = `12px ${FONT}`;
-  ctx.fillText(S.confirmSpent(formatNumber(spent), bought, formatNumber(draft.cores)), cx, M.y + 104);
+  ctx.fillText(refunded > 0 ? S.confirmRespec(formatNumber(refunded), formatNumber(spent), bought, formatNumber(draft.cores))
+    : S.confirmSpent(formatNumber(spent), bought, formatNumber(draft.cores)), cx, M.y + 104);
   ctx.fillStyle = COLORS.sub; ctx.font = `10px ${FONT}`; ctx.fillText(S.confirmFormula(formatShort(shiftGoal(st.meta))), cx, M.y + 124);
   ctx.textAlign = 'left';
   const column = (x: number, title: string, color: string, items: string[]) => {

@@ -187,11 +187,49 @@ export function buyNode(draft: Draft, def: NodeDef): boolean {
   return true;
 }
 
-/** Cores spent and nodes bought in this draft compared to the saved tree. */
-export function draftSummary(st: GameState, draft: Draft): { spent: number; bought: number } {
-  const spent = st.meta.cores + draft.gained - draft.cores;
-  const bought = NODES.filter(n => nodeLevel(draft.nodes, n.id) > nodeLevel(st.meta.nodes, n.id)).length;
-  return { spent, bought };
+/* Respec (free, shift screen only): refund single levels or the whole tree back into the draft. */
+
+/** Cores paid for levels [from, to) of a node. */
+const levelsCost = (def: NodeDef, from: number, to: number): number => def.cost.slice(from, to).reduce((a, c) => a + c, 0);
+
+/**
+ * A node level can be refunded if it's owned – unless it's the last level and some owned node would lose its only owned parent
+ * (it would be left floating in the tree). Leaves first, or reset the whole tree.
+ */
+export function canRefundNode(draft: Draft, def: NodeDef): boolean {
+  const lv = nodeLevel(draft.nodes, def.id);
+  if (def.id === 'core' || lv <= 0) return false;
+  if (lv > 1) return true;
+  return NODES.every(n => nodeLevel(draft.nodes, n.id) === 0 || !parentsOf(n).includes(def.id) ||
+    parentsOf(n).some(p => p !== def.id && nodeLevel(draft.nodes, p) > 0));
+}
+
+export function refundNode(draft: Draft, def: NodeDef): boolean {
+  if (!canRefundNode(draft, def)) return false;
+  const lv = nodeLevel(draft.nodes, def.id);
+  draft.cores += def.cost[lv - 1]!;
+  if (lv > 1) draft.nodes[def.id] = lv - 1; else delete draft.nodes[def.id];
+  return true;
+}
+
+/** Refunds every node of the draft. Returns the Cores refunded. */
+export function resetDraft(draft: Draft): number {
+  let refunded = 0;
+  for (const n of NODES) if (n.id !== 'core') refunded += levelsCost(n, 0, nodeLevel(draft.nodes, n.id));
+  draft.cores += refunded;
+  draft.nodes = {};
+  return refunded;
+}
+
+/** Compared to the saved tree: Cores spent on new levels, Cores refunded from removed levels, and nodes that gained levels. */
+export function draftSummary(st: GameState, draft: Draft): { spent: number; refunded: number; bought: number } {
+  let spent = 0, refunded = 0, bought = 0;
+  for (const n of NODES) {
+    if (n.id === 'core') continue;
+    const was = nodeLevel(st.meta.nodes, n.id), now = nodeLevel(draft.nodes, n.id);
+    if (now > was) { spent += levelsCost(n, was, now); bought++; } else refunded += levelsCost(n, now, was);
+  }
+  return { spent, refunded, bought };
 }
 
 /** Applies the draft, keeps the meta progress and starts a fresh run in the same state object. */
