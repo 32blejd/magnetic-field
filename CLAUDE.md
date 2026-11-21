@@ -56,7 +56,7 @@ docs/        # DESIGN.md – game design, numbers, balance tables; docs/mockups/
 
 ## Saving
 
-- `localStorage`, key `magnetic-field-save`, JSON with a `version` field (`save/save.ts`), currently version 4 (v2 added the Polarity Shift `meta`: Cores, shifts, Core tree; v3 added the Magnetron: Charge Crystals, Lodestones, pity counter; v4 added the Auto-shift target `meta.autoShift` and Void coins in the run stats).
+- `localStorage`, key `magnetic-field-save`, JSON with a `version` field (`save/save.ts`), currently version 5 (v2 added the Polarity Shift `meta`: Cores, shifts, Core tree; v3 added the Magnetron: Charge Crystals, Lodestones, pity counter; v4 added the Auto-shift target `meta.autoShift` and Void coins in the run stats; v5 added the Auto-buyer pause `meta.autoBuyOff`).
 - Loading is tolerant: only currency and levels are required, missing fields fall back to defaults, wrong types reject the save. A save that can't be read (corrupted or from a newer version) is copied to `magnetic-field-save-unreadable` before the game starts fresh, so autosave never destroys it; the player sees a banner.
 - Every change to the saved shape = bump `CURRENT_VERSION` + a migration step in `save/migrations.ts` + a test. Never break old saves.
 - Autosave every 30 s and on `visibilitychange`/`beforeunload`. Export/import as base64 text exists in `save/save.ts` (no UI yet).

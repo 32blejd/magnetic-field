@@ -4,7 +4,7 @@ import { PULSE } from '../src/data/tuning';
 import { UPGRADE_BY_ID } from '../src/data/upgrades';
 import { triggerPulse, upgradeUnlockAt } from '../src/game/abilities';
 import {
-  bonuses, buyNode, canBuyNode, canShift, commitShift, coresFor, draftSummary, nextCoreAt, nodeVisible, shiftGoal, startDraft, treeUnlocked,
+  bonuses, buyNode, canBuyNode, canShift, commitShift, coresFor, draftSummary, nextCoreAt, nextShiftGoal, nodeVisible, shiftGoal, startDraft, treeUnlocked,
 } from '../src/game/prestige';
 import { nextCost } from '../src/game/shop';
 import { createState, emptyMeta } from '../src/game/state';
@@ -28,6 +28,8 @@ describe('Polarity Shift', () => {
   it('raises the goal linearly with every shift and pays ~10 Cores at the goal of any run', () => {
     const st = createState(1, { ...emptyMeta(), shifts: 2 });
     expect(shiftGoal(st.meta)).toBe(4_000_000); // 1M × (1 + 1.5 × 2)
+    expect(nextShiftGoal(st.meta)).toBe(5_500_000); // the run after the next shift
+    expect(nextShiftGoal(createState().meta)).toBe(2_500_000);
     st.totalEarned = 3_999_999; expect(canShift(st)).toBe(false);
     st.totalEarned = 4_000_000; expect(coresFor(st)).toBe(10);
     st.totalEarned = 16_000_000; expect(coresFor(st)).toBe(20);
@@ -85,7 +87,7 @@ describe('Polarity Shift', () => {
     buyNode(draft, NODE_BY_ID.Sb1!);
     buyNode(draft, NODE_BY_ID.Sb2!);
     commitShift(st, draft);
-    expect(st.meta).toEqual({ cores: 5, coresEarned: 10, shifts: 1, nodes: { Sb1: 2, Sb2: 1 }, crystals: 3, lodestones: {}, pity: 0, autoShift: 0 });
+    expect(st.meta).toEqual({ cores: 5, coresEarned: 10, shifts: 1, nodes: { Sb1: 2, Sb2: 1 }, crystals: 3, lodestones: {}, pity: 0, autoShift: 0, autoBuyOff: false });
     expect(st.money).toBe(500); // Head Start 1
     expect(st.totalEarned).toBe(0);
     expect(st.levels.value).toBe(0);
@@ -98,7 +100,7 @@ describe('Core tree bonuses', () => {
   it('are neutral with an empty tree', () => {
     const st = createState();
     expect(getStats(st)).toMatchObject({ value: 1, range: 30 });
-    expect(nextCost(st, UPGRADE_BY_ID.value)).toBe(8);
+    expect(nextCost(st, UPGRADE_BY_ID.value)).toBe(7); // round(7.2)
   });
 
   it('change stats, costs, unlocks and abilities', () => {
@@ -126,9 +128,9 @@ describe('save with Polarity Shift', () => {
   it('round-trips the meta progress', () => {
     const st = withNodes({ Nb1: 2, Sb1: 1 }, 20);
     st.meta.cores = 7; st.meta.shifts = 2;
-    st.meta.crystals = 42; st.meta.lodestones = { 'iron-epic': 2 }; st.meta.pity = 7; st.meta.autoShift = 2;
+    st.meta.crystals = 42; st.meta.lodestones = { 'iron-epic': 2 }; st.meta.pity = 7; st.meta.autoShift = 2; st.meta.autoBuyOff = true;
     expect(deserialize(serialize(st))!.meta).toEqual({
-      cores: 7, coresEarned: 20, shifts: 2, nodes: { Nb1: 2, Sb1: 1 }, crystals: 42, lodestones: { 'iron-epic': 2 }, pity: 7, autoShift: 2,
+      cores: 7, coresEarned: 20, shifts: 2, nodes: { Nb1: 2, Sb1: 1 }, crystals: 42, lodestones: { 'iron-epic': 2 }, pity: 7, autoShift: 2, autoBuyOff: true,
     });
   });
 

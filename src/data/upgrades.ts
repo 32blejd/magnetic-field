@@ -23,7 +23,7 @@ const BASE_CROSS_TIME = 5 / 3 / 0.9 / 0.95; // ≈ 1.95 s
 
 /** Array order = panel order of the starting upgrades; the rest are appended as they unlock. */
 export const UPGRADES: readonly UpgradeDef[] = [
-  { id: 'value', max: 30, base: 8, growth: 1.53, unlockAt: 0,
+  { id: 'value', max: 30, base: 7.2, growth: 1.53, unlockAt: 0,
     fx: l => { const k = (20 * l) / 30; return Math.round((1 + k) * 1.15 ** k); } }, // 1 → 344 coins per pickup
   { id: 'range', max: 20, base: 4, growth: 1.73, unlockAt: 0,
     fx: l => 30 + 5 * l }, // 30 → 130 px

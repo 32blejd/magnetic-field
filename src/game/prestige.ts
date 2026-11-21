@@ -137,6 +137,8 @@ export const compoundMult = (st: GameState, b: Bonuses): number => (b.compound ?
 
 /** Earned this run needed to shift: grows linearly with every completed shift. */
 export const shiftGoal = (meta: MetaState): number => PRESTIGE.goal * (1 + PRESTIGE.goalStep * meta.shifts);
+/** Goal of the run that the next shift starts. */
+export const nextShiftGoal = (meta: MetaState): number => shiftGoal({ ...meta, shifts: meta.shifts + 1 });
 export const canShift = (st: GameState): boolean => hasEarned(st, shiftGoal(st.meta));
 export const treeUnlocked = (st: GameState): boolean => st.meta.shifts > 0 || hasEarned(st, PRESTIGE.treeUnlockAt);
 
@@ -203,6 +205,7 @@ export function commitShift(st: GameState, draft: Draft): void {
     lodestones: { ...st.meta.lodestones },
     pity: st.meta.pity,
     autoShift: st.meta.autoShift,
+    autoBuyOff: st.meta.autoBuyOff,
   };
   Object.assign(st, createState(st.rng, meta, bonuses(meta).headStart));
 }

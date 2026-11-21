@@ -31,7 +31,7 @@ describe('upgrade effects', () => {
 describe('upgrade costs', () => {
   it('start at the base cost and always grow', () => {
     for (const u of UPGRADES) {
-      expect(costOf(u, 0)).toBe(u.base);
+      expect(costOf(u, 0)).toBe(Math.round(u.base));
       for (let l = 1; l < u.max; l++) expect(costOf(u, l)).toBeGreaterThan(costOf(u, l - 1));
     }
   });

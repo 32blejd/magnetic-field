@@ -185,16 +185,30 @@ describe('Drones (W keystone)', () => {
 });
 
 describe('Auto-buyer (W)', () => {
-  it('buys the cheapest affordable upgrade, one level per 0.25 s', () => {
+  it('buys the lowest cost × weight (Value counts as cheaper), one level per 0.25 s', () => {
     const st = quiet({ Wb2: 1 });
     st.money = 100;
     const out = step(st, STEP, null);
-    expect(out.filter(e => e.type === 'autobuy')).toEqual([{ type: 'autobuy', id: 'range' }]); // range & spawn cost 4, range first
-    expect(st.money).toBe(96);
+    expect(out.filter(e => e.type === 'autobuy')).toEqual([{ type: 'autobuy', id: 'value' }]); // 7 × 0.33 beats range/spawn at 4
+    expect(st.money).toBe(93);
     for (let k = 0; k < Math.floor(AUTO.buyEvery / STEP) - 1; k++) step(st, STEP, null);
-    expect(st.levels.range + st.levels.spawn).toBe(1); // still waiting
+    expect(st.levels.value + st.levels.range + st.levels.spawn).toBe(1); // still waiting
     step(st, STEP, null); step(st, STEP, null);
-    expect(st.levels.spawn).toBe(1);
+    expect(st.levels.value).toBe(2); // 11 × 0.33 ≈ 3.6 still beats 4
+  });
+
+  it('saves up for Value instead of buying a cheaper upgrade', () => {
+    const st = quiet({ Wb2: 1 });
+    st.money = 5; // range costs 4, Value 7
+    for (let k = 0; k < 60; k++) step(st, STEP, null);
+    expect(st.money).toBe(5);
+    st.money = 7;
+    step(st, STEP, null);
+    expect(st.levels.value).toBe(1);
+    st.levels.value = 30; // maxed Value is skipped
+    st.money = 5;
+    for (let k = 0; k <= AUTO.buyEvery / STEP; k++) step(st, STEP, null); // past the 0.25 s pause after a purchase
+    expect(st.levels.range).toBe(1);
   });
 
   it('never buys locked or unaffordable upgrades, and does nothing without the node', () => {
@@ -206,6 +220,38 @@ describe('Auto-buyer (W)', () => {
     plain.money = 1000;
     step(plain, STEP, null);
     expect(plain.money).toBe(1000);
+  });
+
+  it('does nothing while paused, resumes when turned back on, and the pause survives a shift', () => {
+    const st = quiet({ Wb2: 1 });
+    st.money = 100;
+    st.meta.autoBuyOff = true;
+    for (let k = 0; k < 60; k++) step(st, STEP, null);
+    expect(st.money).toBe(100);
+    st.meta.autoBuyOff = false;
+    step(st, STEP, null);
+    expect(st.money).toBe(93);
+    st.meta.autoBuyOff = true;
+    commitAutoShift(st);
+    expect(st.meta.autoBuyOff).toBe(true);
+  });
+});
+
+describe('save version 5', () => {
+  it('migrates a version 4 save with the Auto-buyer running, and round-trips the pause', () => {
+    const v4 = { version: 4, money: 5, totalEarned: 5, levels: {}, meta: { shifts: 1, nodes: { Wb2: 1 }, autoShift: 2 } };
+    const st = deserialize(JSON.stringify(v4))!;
+    expect(st.meta.autoBuyOff).toBe(false);
+    expect(st.meta.autoShift).toBe(2);
+    st.meta.autoBuyOff = true;
+    expect(JSON.parse(serialize(st)).version).toBe(5);
+    expect(deserialize(serialize(st))!.meta.autoBuyOff).toBe(true);
+  });
+
+  it('rejects a pause flag of the wrong type', () => {
+    const base = JSON.parse(serialize(createState()));
+    base.meta.autoBuyOff = 'yes';
+    expect(deserialize(JSON.stringify(base))).toBeNull();
   });
 });
 

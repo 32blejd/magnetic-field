@@ -259,7 +259,7 @@ export function step(st: GameState, dt: number, magnet: Vec | null, out: GameEve
       if (d > TOUCH_DISTANCE && !helperTouch) { // move only if not touching yet (also avoids 0/0 when d = 0)
         const R = c.anti ? S.baseRange : S.range; // Pulse doesn't pull anti-coins
         const helper = (m && d < R) || c.anti ? null : helperPulling(helpers, c);
-        if (m && d < R) pullToward(c, m, d, R, S.strength, dt);
+        if (m && d < R) pullToward(c, m, d, R, c.anti ? S.antiStrength : S.strength, dt); // nor does Strength
         else if (helper) pullToward(c, helper.h, helper.d, helper.h.range, S.strength, dt);
         else {
           if (m && c.tier === 'prism' && b.homingPrisms) steerToward(c, m, dt);

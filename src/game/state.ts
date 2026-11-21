@@ -2,7 +2,7 @@ import { EVENTS } from '../data/tuning';
 import { UPGRADES, type UpgradeId } from '../data/upgrades';
 import type { GameState, MetaState } from './types';
 
-export const emptyMeta = (): MetaState => ({ cores: 0, coresEarned: 0, shifts: 0, nodes: {}, crystals: 0, lodestones: {}, pity: 0, autoShift: 0 });
+export const emptyMeta = (): MetaState => ({ cores: 0, coresEarned: 0, shifts: 0, nodes: {}, crystals: 0, lodestones: {}, pity: 0, autoShift: 0, autoBuyOff: false });
 
 /**
  * A fresh run.

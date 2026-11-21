@@ -68,6 +68,8 @@ export interface MetaState {
   pity: number;
   /** Auto-shift target as a multiple of the run goal (0 = off); one of AUTO_SHIFT_TARGETS. */
   autoShift: number;
+  /** Auto-buyer paused by the player (the node stays owned). Off = the Auto-buyer runs. */
+  autoBuyOff: boolean;
 }
 
 export interface GameState {

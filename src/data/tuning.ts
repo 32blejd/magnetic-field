@@ -1,5 +1,6 @@
 /* Game tuning constants. All distances are in logical units of a 960×540 view (×2 on a 1920×1080 screen).
    Objects that debug URL params may tweak are left mutable on purpose. */
+import type { UpgradeId } from './upgrades';
 
 export const VIEW = { w: 960, h: 540 } as const;
 export const BOARD = { x: 16, y: 16, w: 700, h: 446 } as const;
@@ -84,4 +85,7 @@ export const AUTO = {
   pulseCoins: 5,
   /** Auto-buyer buys at most one level per this many seconds. */
   buyEvery: 0.25,
+  /** Auto-buyer picks the lowest cost × weight (missing = 1) and saves up for it. Value is the best upgrade, so it counts as 3× cheaper:
+      buying cheapest-first instead costs ~20% of run speed (bot: 1M in 13:25 vs 10:53). */
+  buyWeight: { value: 0.33 } as Partial<Record<UpgradeId, number>>,
 };

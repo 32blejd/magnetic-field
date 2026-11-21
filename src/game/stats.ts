@@ -15,6 +15,8 @@ export interface Stats {
   baseRange: number;
   spawn: number;
   strength: number;
+  /** Pull strength felt by anti-coins: the Strength upgrade at level 0, so upgrading Strength doesn't drag them in harder. */
+  antiStrength: number;
   capacity: number;
   /** Added to both Gold and Prism chance. */
   rarity: number;
@@ -47,6 +49,7 @@ export function getStats(st: GameState): Stats {
     baseRange,
     spawn,
     strength: f('strength'),
+    antiStrength: UPGRADE_BY_ID.strength.fx(0),
     capacity,
     rarity: f('rarity') + b.rareChance,
     crossTime,

@@ -42,7 +42,7 @@ export const NODE_TEXT: Record<string, { name: string; desc: string }> = {
   Sb6: { name: 'Core Yield', desc: '+20% Cores from every shift per level.' },
   Skey: { name: 'Interest', desc: 'KEYSTONE · Every 10 s you gain 1% of the coins you hold, up to 10 s of perfect income.' },
   Wb1: { name: 'Bulk Buy', desc: 'Hold Shift while buying an upgrade to buy as many levels as you can afford.' },
-  Wb2: { name: 'Auto-buyer', desc: 'Automatically buys the cheapest affordable upgrade (up to 4 levels per second).' },
+  Wb2: { name: 'Auto-buyer', desc: 'Automatically buys upgrades (up to 4 levels per second). Saves up for Value when it is the better deal.' },
   Wb3: { name: 'Magnet Memory', desc: 'The field keeps working for 1 s after the cursor leaves the board.' },
   Wb4: { name: 'Auto-pulse', desc: 'Pulse fires on its own when it is ready and 5+ coins are within its range.' },
   Wb5: { name: 'Homing Prisms', desc: 'Prism coins slowly steer toward your magnet from anywhere on the board.' },
@@ -126,6 +126,11 @@ export const S = {
   pulseActive: 'PULSE ACTIVE',
   pulseCooldown: (s: number) => `PULSE  ${s}s`,
   auto: 'AUTO',
+  autoBuyTitle: 'AUTO-BUYER',
+  autoBuyTip: (on: boolean) =>
+    on ? 'On: buys upgrades 4× per second and saves up for Value when it is the better deal. Click or press B to pause it.'
+      : 'Paused: upgrades are bought only by hand. Click or press B to turn it back on.',
+  autoBuyState: (on: boolean) => (on ? 'ON' : 'PAUSED'),
   offline: (s: string) => `OFFLINE ${s}s`,
   combo: (n: string) => `COMBO ${n}`,
 
@@ -141,7 +146,7 @@ export const S = {
   prestigeReadyTitle: 'POLARITY SHIFT · READY',
   prestigeReadyLine: (earned: string) => `Earned ${earned} · shift now for`,
   prestigeGain: (n: string) => `+${n} ◆ CORES`,
-  prestigeNext: (at: string) => `next Core at ${at}`,
+  prestigeNext: (at: string) => `+1 ◆ at ${at}`,
   treeButton: '◆ CORE TREE  [T]',
   shiftButton: 'SHIFT POLARITY  [P]',
   cores: (n: string) => `CORES: ${n}`,
@@ -151,7 +156,7 @@ export const S = {
     mult > 0 ? `Auto-shift at ${at} (${mult}× the goal). Cores are banked for your next manual shift. Click or A to change.`
       : 'Auto-shift is off. Click or press A to shift automatically at 1×, 2× or 4× the goal.',
   autoShiftDone: (n: string) => `AUTO-SHIFT #${n}`,
-  autoShiftDoneSub: (cores: string, banked: string) => `+${cores} ◆ banked · ${banked} ◆ to spend on your next manual shift`,
+  autoShiftDoneSub: (cores: string, banked: string, goal: string) => `+${cores} ◆ banked (${banked} ◆ for your next manual shift) · new goal ${goal}`,
 
   treeTitle: 'POLARITY SHIFT',
   treePreview: 'CORE TREE · PREVIEW',
@@ -178,6 +183,7 @@ export const S = {
   confirmSpent: (spent: string, nodes: number, left: string) =>
     `Spent ${spent} ◆ on ${nodes} node${nodes === 1 ? '' : 's'} · ${left} ◆ saved for later`,
   confirmFormula: (goal: string) => `Cores = 10 × √(earned this run ÷ ${goal}), rounded down`,
+  confirmNextGoal: (goal: string) => `NEXT RUN GOAL: EARN ${goal}`,
   confirmResets: 'RESETS',
   confirmResetList: ['Coins', 'Upgrade levels', 'Unlocks & mini-goals', 'Run stats'],
   confirmKeeps: 'YOU KEEP',
@@ -185,6 +191,6 @@ export const S = {
   confirmOk: 'SHIFT & START RUN',
   confirmBack: 'BACK TO TREE',
   shiftDone: (n: string) => `POLARITY SHIFT #${n}`,
-  shiftDoneSub: 'A new run begins – your Core tree is active.',
+  shiftDoneSub: (goal: string) => `New goal: earn ${goal} this run · your Core tree is active`,
   saveUnreadable: { title: 'SAVE COULD NOT BE LOADED', sub: 'Starting a new run. The old save was kept as a backup copy.' },
 };

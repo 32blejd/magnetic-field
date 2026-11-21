@@ -1,7 +1,7 @@
 /* Core tree screen (browse / spend Cores), the confirm dialog over it, and the polarity-flip animation. */
 import { BRANCHES, NODES, parentsOf, type NodeDef } from '../data/prestige';
 import { VIEW } from '../data/tuning';
-import { canBuyNode, draftSummary, nodeCost, nodeLevel, nodeMaxed, nodeVisible, shiftGoal } from '../game/prestige';
+import { canBuyNode, draftSummary, nodeCost, nodeLevel, nodeMaxed, nextShiftGoal, nodeVisible, shiftGoal } from '../game/prestige';
 import type { GameState, Vec } from '../game/types';
 import { formatNumber, formatShort } from '../ui/format';
 import { inRect, type Rect } from '../ui/layout';
@@ -234,6 +234,8 @@ export function drawConfirm(ctx: Ctx, st: GameState, v: TreeView, cursor: Vec | 
   };
   column(M.x + 30, S.confirmResets, COLORS.red, S.confirmResetList);
   column(M.x + 250, S.confirmKeeps, COLORS.cyan, S.confirmKeepList);
+  ctx.textAlign = 'center'; ctx.fillStyle = COLORS.amber; ctx.font = `700 12px ${FONT}`;
+  ctx.fillText(S.confirmNextGoal(formatShort(nextShiftGoal(st.meta))), cx, M.y + 252); ctx.textAlign = 'left';
   drawButton(ctx, CONFIRM_OK, S.confirmOk, true, !!cursor && inRect(cursor, CONFIRM_OK), COLORS.magenta);
   drawButton(ctx, CONFIRM_BACK, S.confirmBack, false, !!cursor && inRect(cursor, CONFIRM_BACK));
 }

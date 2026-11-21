@@ -59,6 +59,7 @@ function metaFromSave(m: SaveData['meta']): MetaState {
     lodestones,
     pity: Math.max(0, Math.floor(num(m?.pity, 0))),
     autoShift: AUTO_SHIFT_TARGETS.includes(num(m?.autoShift, 0)) ? num(m?.autoShift, 0) : 0,
+    autoBuyOff: m?.autoBuyOff === true,
   };
 }
 

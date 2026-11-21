@@ -2,7 +2,7 @@ import type { GoodTierId } from '../data/tiers';
 import type { UpgradeId } from '../data/upgrades';
 import type { FeatureId } from '../game/types';
 
-export const CURRENT_VERSION = 4;
+export const CURRENT_VERSION = 5;
 
 /**
  * Saved shape, version 1 (before Polarity Shift). Only primary data – everything else is derived or transient.
@@ -59,10 +59,19 @@ export interface SaveV4 extends Omit<SaveV3, 'version' | 'meta'> {
   };
 }
 
-export type SaveData = SaveV4;
+/** Version 5: the player can pause the Auto-buyer (meta.autoBuyOff; missing = running, as before). */
+export interface SaveV5 extends Omit<SaveV4, 'version' | 'meta'> {
+  version: 5;
+  meta?: NonNullable<SaveV4['meta']> & {
+    autoBuyOff?: boolean;
+  };
+}
+
+export type SaveData = SaveV5;
 
 const isObj = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
 const isNum = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
+const isBool = (v: unknown): v is boolean => typeof v === 'boolean';
 const isStrArray = (v: unknown): boolean => Array.isArray(v) && v.every(x => typeof x === 'string');
 const optional = (v: unknown, check: (x: unknown) => boolean): boolean => v === undefined || check(v);
 
@@ -81,7 +90,8 @@ function isMetaShape(meta: unknown): boolean {
   if (meta === undefined) return true;
   if (!isObj(meta)) return false;
   return optional(meta.cores, isNum) && optional(meta.coresEarned, isNum) && optional(meta.shifts, isNum) && optional(meta.nodes, isObj) &&
-    optional(meta.crystals, isNum) && optional(meta.lodestones, isObj) && optional(meta.pity, isNum) && optional(meta.autoShift, isNum);
+    optional(meta.crystals, isNum) && optional(meta.lodestones, isObj) && optional(meta.pity, isNum) && optional(meta.autoShift, isNum) &&
+    optional(meta.autoBuyOff, isBool);
 }
 
 /**
@@ -90,12 +100,12 @@ function isMetaShape(meta: unknown): boolean {
  */
 export function migrate(raw: unknown): SaveData | null {
   if (!isObj(raw) || !isNum(raw.version)) return null;
-  if (raw.version === 1) { // v1 → v4: no Polarity Shift / Magnetron progress yet
-    return isV1Shape(raw) ? { ...(raw as unknown as SaveV1), version: 4, meta: undefined } : null;
+  if (raw.version === 1) { // v1 → v5: no Polarity Shift / Magnetron progress yet
+    return isV1Shape(raw) ? { ...(raw as unknown as SaveV1), version: 5, meta: undefined } : null;
   }
-  // v2 → v3 → v4: every field added since v1 (meta, Magnetron, Auto-shift, Void stats) is optional and defaults to empty
-  if (raw.version === 2 || raw.version === 3 || raw.version === 4) {
-    return isV1Shape(raw) && isMetaShape(raw.meta) ? ({ ...(raw as unknown as SaveV4), version: 4 }) : null;
+  // v2 → … → v5: every field added since v1 (meta, Magnetron, Auto-shift, Void stats, Auto-buyer pause) is optional and defaults to empty
+  if (raw.version === 2 || raw.version === 3 || raw.version === 4 || raw.version === 5) {
+    return isV1Shape(raw) && isMetaShape(raw.meta) ? ({ ...(raw as unknown as SaveV5), version: 5 }) : null;
   }
   return null;
 }

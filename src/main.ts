@@ -3,7 +3,7 @@ import { BOARD, STEP, VIEW } from './data/tuning';
 import { triggerPulse } from './game/abilities';
 import { magnetronUnlocked, pullMany } from './game/lodestones';
 import {
-  autoShiftDue, bonuses, buyNode, canShift, commitAutoShift, commitShift, nextAutoShiftTarget, startDraft, treeUnlocked,
+  autoShiftDue, bonuses, buyNode, canShift, commitAutoShift, commitShift, nextAutoShiftTarget, shiftGoal, startDraft, treeUnlocked,
 } from './game/prestige';
 import { buy, buyMax, canBuy } from './game/shop';
 import { step } from './game/simulation';
@@ -19,9 +19,9 @@ import { cellAt, drawMagnetron } from './render/magnetron';
 import { drawConfirm, drawShiftAnim, drawTree, nodeAt, treeButtons } from './render/tree';
 import { AUTOSAVE_INTERVAL, clearSave, loadGame, saveGame, type LoadResult } from './save/save';
 import { rowKey, setupInput } from './ui/input';
-import { AUTO_SHIFT_BUTTON, MAGNETRON_BUTTON, PRESTIGE_BUTTON, buttonRect, inRect, visibleRows } from './ui/layout';
+import { AUTO_BUY_BUTTON, AUTO_SHIFT_BUTTON, MAGNETRON_BUTTON, PRESTIGE_BUTTON, buttonRect, inRect, visibleRows } from './ui/layout';
 import { MAG_BACK, PULL1, PULL10, newMagnetronView, type MagnetronView } from './ui/magnetronLayout';
-import { formatNumber } from './ui/format';
+import { formatNumber, formatShort } from './ui/format';
 import { S } from './ui/strings';
 import { CONFIRM_BACK, CONFIRM_OK, newTreeView, zoomAt, type TreeMode, type TreeView } from './ui/treeLayout';
 
@@ -77,13 +77,19 @@ function tick(): void {
 function autoShift(): void {
   const gained = commitAutoShift(st);
   fx.reset();
-  fx.banner(S.autoShiftDone(formatNumber(st.meta.shifts)), S.autoShiftDoneSub(formatNumber(gained), formatNumber(st.meta.cores)), COLORS.green, 4);
+  fx.banner(S.autoShiftDone(formatNumber(st.meta.shifts)), S.autoShiftDoneSub(formatNumber(gained), formatNumber(st.meta.cores), formatShort(shiftGoal(st.meta))), COLORS.green, 4);
   lastBoardPos = null;
   save();
 }
 function cycleAutoShift(): void {
   if (!autoShiftVisible(st)) return;
   st.meta.autoShift = nextAutoShiftTarget(st.meta.autoShift);
+  save();
+}
+/** Pause / resume the Auto-buyer (only once its node is owned). */
+function toggleAutoBuy(): void {
+  if (!bonuses(st.meta).autoBuy) return;
+  st.meta.autoBuyOff = !st.meta.autoBuyOff;
   save();
 }
 for (let i = 0; i < debug.warm / STEP; i++) tick();
@@ -105,7 +111,7 @@ function finishShift(): void {
   if (!tree?.draft) return;
   commitShift(st, tree.draft);
   fx.reset();
-  fx.banner(S.shiftDone(String(st.meta.shifts)), S.shiftDoneSub, COLORS.core, 4);
+  fx.banner(S.shiftDone(String(st.meta.shifts)), S.shiftDoneSub(formatShort(shiftGoal(st.meta))), COLORS.core, 4);
   lastBoardPos = null;
   save();
   closeTree();
@@ -136,7 +142,7 @@ function updateCursorStyle(p: Vec): void {
   let pointer = false;
   if (screen === 'run') {
     pointer = (inRect(p, PRESTIGE_BUTTON) && prestigeButtonAction(st) !== null) || (inRect(p, MAGNETRON_BUTTON) && magnetronUnlocked(st)) ||
-      (inRect(p, AUTO_SHIFT_BUTTON) && autoShiftVisible(st)) ||
+      (inRect(p, AUTO_SHIFT_BUTTON) && autoShiftVisible(st)) || (inRect(p, AUTO_BUY_BUTTON) && bonuses(st.meta).autoBuy) ||
       visibleRows(st).some(({ def, locked }, i) => !locked && inRect(p, buttonRect(i)) && canBuy(st, def));
     canvas.style.cursor = inRect(p, BOARD) ? 'none' : pointer ? 'pointer' : 'default';
   } else if (screen === 'tree' && tree) {
@@ -173,6 +179,7 @@ setupInput(canvas, {
       if (inRect(p, PRESTIGE_BUTTON)) { pressPrestigeButton(); return; }
       if (inRect(p, MAGNETRON_BUTTON)) { openMagnetron(); return; }
       if (inRect(p, AUTO_SHIFT_BUTTON) && autoShiftVisible(st)) { cycleAutoShift(); return; }
+      if (inRect(p, AUTO_BUY_BUTTON) && bonuses(st.meta).autoBuy) { toggleAutoBuy(); return; }
       visibleRows(st).forEach((_, i) => { if (inRect(p, buttonRect(i))) tryBuy(i, shift); });
     } else if (screen === 'tree' && tree) {
       const drag = tree.drag;
@@ -201,6 +208,7 @@ setupInput(canvas, {
       if (code === 'KeyP' && canShift(st)) openTree('shift');
       if (code === 'KeyG') openMagnetron();
       if (code === 'KeyA') cycleAutoShift();
+      if (code === 'KeyB') toggleAutoBuy();
       const row = rowKey(code);
       if (row >= 0) tryBuy(row, shift);
       return false;

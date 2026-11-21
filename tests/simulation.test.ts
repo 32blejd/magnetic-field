@@ -90,6 +90,20 @@ describe('simulation', () => {
     expect(anti.x).toBe(center.x - dist); // untouched
   });
 
+  it('Strength pulls good coins harder but not anti-coins', () => {
+    const pulled = (strength: number, anti: boolean) => { // 28 px: inside the 30 px field, not touching yet
+      const st = quietState();
+      st.levels.strength = strength;
+      const c = anti ? coin({ x: center.x + 28, dx: 0, tier: 'anti', anti: true, speed: 0, pull: ANTI.pull }) : coin({ x: center.x + 28, dx: 0 });
+      st.coins.push(c);
+      step(st, STEP, center);
+      return center.x + 28 - st.coins[0]!.x;
+    };
+    expect(pulled(15, false)).toBeGreaterThan(pulled(0, false) * 10);
+    expect(pulled(15, true)).toBeGreaterThan(0);
+    expect(pulled(15, true)).toBe(pulled(0, true));
+  });
+
   it('builds a combo only after it is unlocked', () => {
     const st = quietState();
     st.coins.push(coin(), coin());
@@ -127,7 +141,7 @@ describe('simulation', () => {
     st.money = 1000;
     expect(buy(st, UPGRADE_BY_ID.strength)).toBe(false); // locked
     expect(buy(st, UPGRADE_BY_ID.value)).toBe(true);
-    expect(st.money).toBe(1000 - 8);
+    expect(st.money).toBe(1000 - 7);
     expect(st.levels.value).toBe(1);
   });
 });

@@ -5,7 +5,7 @@ import { bonuses } from '../game/prestige';
 import { canBuy, isMaxed, nextCost } from '../game/shop';
 import type { GameState, Vec } from '../game/types';
 import { formatNumber, formatShort, formatUpgradeValue } from '../ui/format';
-import { MAGNETRON_BUTTON, buttonRect, inRect, PANEL, rowAt, rowRect, visibleRows } from '../ui/layout';
+import { AUTO_BUY_BUTTON, MAGNETRON_BUTTON, buttonRect, inRect, PANEL, rowAt, rowRect, visibleRows } from '../ui/layout';
 import { M, S, UPGRADE_TEXT } from '../ui/strings';
 import { glow, hexPath, noGlow, wrapText, type Ctx } from './draw';
 import type { Effects } from './effects';
@@ -31,10 +31,7 @@ export function drawPanel(ctx: Ctx, st: GameState, fx: Effects, cursor: Vec | nu
     ctx.textAlign = 'left'; ctx.globalAlpha = 1;
   });
   ctx.fillStyle = COLORS.magenta; ctx.font = `700 11px ${FONT}`; ctx.fillText(S.upgradesTitle, P.x + 16, P.y + 82);
-  if (bonuses(st.meta).autoBuy) { // Auto-buyer tag next to the title
-    const x = P.x + 22 + ctx.measureText(S.upgradesTitle).width;
-    ctx.fillStyle = COLORS.green; ctx.font = `700 9px ${FONT}`; ctx.fillText(S.auto, x, P.y + 82);
-  }
+  if (bonuses(st.meta).autoBuy) drawAutoBuyToggle(ctx, st, cursor);
   if (magnetronUnlocked(st)) { // Magnetron button with the crystal count
     const b = MAGNETRON_BUTTON, hover = cursor !== null && inRect(cursor, b);
     glow(ctx, COLORS.core, hover ? 14 : 6); ctx.fillStyle = COLORS.core + (hover ? '40' : '18');
@@ -82,9 +79,39 @@ export function drawPanel(ctx: Ctx, st: GameState, fx: Effects, cursor: Vec | nu
   ctx.restore();
 }
 
-/** Description bubble to the left of the hovered row. */
+/** Auto-buyer toggle next to the title: green = running, grey = paused. */
+function drawAutoBuyToggle(ctx: Ctx, st: GameState, cursor: Vec | null): void {
+  const b = AUTO_BUY_BUTTON, on = !st.meta.autoBuyOff, hover = cursor !== null && inRect(cursor, b), col = on ? COLORS.green : COLORS.sub;
+  if (on) glow(ctx, col, hover ? 12 : 5);
+  ctx.fillStyle = on ? col + (hover ? '40' : '1c') : hover ? 'rgba(95,155,179,.15)' : 'transparent';
+  ctx.beginPath(); ctx.roundRect(b.x, b.y, b.w, b.h, 5); ctx.fill();
+  ctx.strokeStyle = col; ctx.lineWidth = 1; ctx.stroke(); noGlow(ctx);
+  ctx.fillStyle = col; ctx.font = `700 9px ${FONT}`; ctx.textAlign = 'center';
+  ctx.fillText(S.auto, b.x + b.w / 2, b.y + b.h / 2 + 1); ctx.textAlign = 'left';
+}
+
+/** Hint bubble for the Auto-buyer toggle, to the left of the panel. */
+function drawAutoBuyTip(ctx: Ctx, st: GameState): void {
+  const on = !st.meta.autoBuyOff, b = AUTO_BUY_BUTTON, w = 230, col = on ? COLORS.green : COLORS.sub;
+  ctx.save();
+  ctx.font = `11px ${FONT}`;
+  const lines = wrapText(ctx, S.autoBuyTip(on), w - 24), h = 30 + lines.length * 15;
+  const x = PANEL.x - w - 8, y = b.y;
+  glow(ctx, col, 10); ctx.fillStyle = 'rgba(8,12,30,.96)';
+  ctx.beginPath(); ctx.roundRect(x, y, w, h, 8); ctx.fill();
+  ctx.strokeStyle = col; ctx.lineWidth = 1; ctx.stroke(); noGlow(ctx);
+  ctx.textBaseline = 'top';
+  ctx.fillStyle = col; ctx.font = `700 11px ${FONT}`;
+  ctx.fillText(`${S.autoBuyTitle} · ${S.autoBuyState(on)}`, x + 12, y + 10);
+  ctx.fillStyle = COLORS.text; ctx.font = `11px ${FONT}`;
+  lines.forEach((l, k) => ctx.fillText(l, x + 12, y + 26 + k * 15));
+  ctx.restore();
+}
+
+/** Description bubble to the left of the hovered row (or the Auto-buyer toggle). */
 export function drawTooltip(ctx: Ctx, st: GameState, cursor: Vec | null): void {
   if (!cursor) return;
+  if (bonuses(st.meta).autoBuy && inRect(cursor, AUTO_BUY_BUTTON)) { drawAutoBuyTip(ctx, st); return; }
   const i = rowAt(st, cursor);
   if (i < 0) return;
   const { def, locked } = visibleRows(st)[i]!;

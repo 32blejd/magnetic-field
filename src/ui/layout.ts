@@ -16,6 +16,8 @@ export const AUTO_SHIFT_BUTTON: Rect = { x: PRESTIGE_BUTTON.x - 100, y: PRESTIGE
 export const PANEL: Rect = { x: 732, y: 16, w: 212, h: 508 };
 /** Magnetron button – panel header, right of the UPGRADES label (after the first shift). */
 export const MAGNETRON_BUTTON: Rect = { x: PANEL.x + PANEL.w - 96, y: PANEL.y + 71, w: 84, h: 22 };
+/** Auto-buyer toggle – panel header, right after the UPGRADES label (once the Auto-buyer node is owned). */
+export const AUTO_BUY_BUTTON: Rect = { x: PANEL.x + 72, y: PANEL.y + 74, w: 38, h: 16 };
 /** Pulse widget – bottom-left corner of the board. */
 export const PULSE_WIDGET: Rect = { x: BOARD.x + 12, y: BOARD.y + BOARD.h - 34, w: 150, h: 22 };
 /** Goal tracker – bottom-right corner of the board (anchored at its bottom-right). */

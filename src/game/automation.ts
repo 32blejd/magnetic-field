@@ -4,18 +4,22 @@ import { AUTO, SPAWN_TIME } from '../data/tuning';
 import { UPGRADES } from '../data/upgrades';
 import { triggerPulse } from './abilities';
 import type { Bonuses } from './prestige';
-import { buy, canBuy, nextCost } from './shop';
+import { buy, isMaxed, nextCost } from './shop';
 import type { GameEvent, GameState, Vec } from './types';
 
-/** Auto-buyer: buys the cheapest affordable upgrade, at most one level per AUTO.buyEvery seconds. */
+/**
+ * Auto-buyer: among unlocked, unmaxed upgrades picks the lowest cost × AUTO.buyWeight (Value counts as cheaper) and buys it
+ * once affordable – until then it saves up instead of buying something else. At most one level per AUTO.buyEvery seconds,
+ * nothing while the player has paused it.
+ */
 export function autoBuy(st: GameState, b: Bonuses, dt: number, out: GameEvent[]): void {
-  if (!b.autoBuy || (st.autoBuyT -= dt) > 0) return;
+  if (!b.autoBuy || st.meta.autoBuyOff || (st.autoBuyT -= dt) > 0) return;
   st.autoBuyT = 0;
-  let best = null, bestCost = Infinity;
+  let best = null, bestScore = Infinity;
   for (const u of UPGRADES) {
-    if (!canBuy(st, u)) continue;
-    const cost = nextCost(st, u);
-    if (cost < bestCost) { bestCost = cost; best = u; }
+    if (!st.unlocked[u.id] || isMaxed(st, u)) continue;
+    const score = nextCost(st, u) * (AUTO.buyWeight[u.id] ?? 1);
+    if (score < bestScore) { bestScore = score; best = u; }
   }
   if (!best || !buy(st, best)) return;
   st.autoBuyT = AUTO.buyEvery;
