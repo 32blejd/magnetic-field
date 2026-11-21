@@ -4,6 +4,7 @@
    ?cores=N     set unspent Cores (Core tree testing)
    ?crystals=N  set Charge Crystals · ?shifts=N set completed shifts (?shifts=1 opens the Magnetron) · ?pulls=N pull N lodestones on load
    ?warm=N      fast-forward N seconds on load
+   ?speed=N     run the game clock N× faster (1–50, e.g. 4 = a whole first run in ~3.5 min)
    ?rare=1      boost Gold/Prism chances (and Void, if its keystone is owned)
    ?anti=1      boost anti-coin chance (needs earned ≥ 25000)
    ?open=shift  open the Core tree on load (shift = spend Cores, needs the goal earned; browse = preview; gacha = Magnetron)
@@ -22,6 +23,8 @@ export interface DebugOptions {
   shifts: number;
   pulls: number;
   warm: number;
+  /** Game clock multiplier (1 = normal). */
+  speed: number;
   open: 'shift' | 'browse' | 'gacha' | null;
   /** Node levels to set, or null. */
   nodes: Record<string, number> | null;
@@ -61,6 +64,7 @@ export function readDebugOptions(search: string): DebugOptions {
     shifts: Number(p.get('shifts')) || 0,
     pulls: Number(p.get('pulls')) || 0,
     warm: Number(p.get('warm')) || 0,
+    speed: Math.min(50, Math.max(1, Number(p.get('speed')) || 1)),
     open: (['shift', 'browse', 'gacha'] as const).find(o => o === p.get('open')) ?? null,
     nodes: parseNodes(p.get('nodes')),
   };

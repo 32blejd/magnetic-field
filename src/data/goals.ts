@@ -14,7 +14,7 @@ const goals = (metric: GoalMetric, steps: [target: number, rewardSeconds: number
   steps.map(([target, rewardSeconds]) => ({ id: `${metric}-${target}`, metric, target, rewardSeconds }));
 
 export const GOALS: readonly GoalDef[] = [
-  ...goals('coins', [[10, 15], [100, 20], [1000, 30], [10000, 45]]), // any non-anti coin
+  ...goals('coins', [[10, 15], [100, 20], [1000, 30], [5000, 45]]), // any non-anti coin
   ...goals('anti', [[1, 20]]),
   ...goals('gold', [[10, 20], [50, 30], [100, 45]]),
   ...goals('prism', [[3, 20], [7, 30], [11, 40], [49, 60]]),

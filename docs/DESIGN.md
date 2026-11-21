@@ -60,7 +60,7 @@ The target feeling: every upgrade is **visible on screen** (bigger field, more c
 
   | Category | Targets (reward in seconds of perfect income) |
   |---|---|
-  | Coins (any non-anti coin) | 10 (15 s) · 100 (20 s) · 1,000 (30 s) · 10,000 (45 s) |
+  | Coins (any non-anti coin) | 10 (15 s) · 100 (20 s) · 1,000 (30 s) · 5,000 (45 s) |
   | Anti-coins | 1 (20 s) |
   | Gold coins | 10 (20 s) · 50 (30 s) · 100 (45 s) |
   | Prism coins | 3 (20 s) · 7 (30 s) · 11 (40 s) · 49 (60 s) |
@@ -98,11 +98,11 @@ What each stat does:
 
 | Upgrade | Effect formula (level `l`) | Lv 0 | Max level | At max | Base cost | Cost growth | Unlock |
 |---|---|---|---|---|---|---|---|
-| Value | `round((1 + k) × 1.15^k)`, `k = 20l/30` | 1 | 30 | 344 | 8 | ×1.60 | start |
+| Value | `round((1 + k) × 1.15^k)`, `k = 20l/30` | 1 | 30 | 344 | 8 | ×1.53 | start |
 | Range | `30 + 5l` px | 30 px | 20 | 130 px | 4 | ×1.73 | start |
 | Spawn rate | `1.0 × 1.14^l` /s | 1.00/s | 20 | 13.74/s | 4 | ×1.73 | start |
 | Strength | `0.5 × 1.15^(20l/15)` | 0.50× | 15 | 8.18× | 6 | ×2.07 | 30 earned |
-| Capacity | `8 + round(40l/15)` coins | 8 | 15 | 48 | 10 | ×2.14 | 150 earned |
+| Capacity | `8 + round(75l/15)` coins (+5 per level) | 8 | 15 | 83 | 10 | ×2.14 | 150 earned |
 | Rarity | `+0.5% × l` to each rare tier | +0% | 10 | Gold 15% · Prism 6% | 50 | ×2.2, plus ×2 per level for Lv 8–10 | 1,000 earned |
 | Coin speed | `1.95 / 0.96^(15l/10)` s | 1.95 s | 10 | 3.60 s | 15 | ×2.98 | 3,000 earned |
 
@@ -118,7 +118,7 @@ Sample costs:
 
 | Upgrade | Lv 0 | Lv 1 | Lv 2 | Lv 5 | Lv 10 | Lv 15 | Lv 20 | Last level |
 |---|---|---|---|---|---|---|---|---|
-| Value | 8 | 13 | 20 | 84 | 880 | 9,223 | 96,714 | 6,646,140 (Lv 29) |
+| Value | 8 | 12 | 19 | 67 | 562 | 4,715 | 39,529 | 1,816,107 (Lv 29) |
 | Range | 4 | 7 | 12 | 62 | 961 | 14,885 | – | 133,332 (Lv 19) |
 | Spawn rate | 4 | 7 | 12 | 62 | 961 | 14,885 | – | 133,332 (Lv 19) |
 | Strength | 6 | 12 | 26 | 228 | 8,667 | – | – | 159,124 (Lv 14) |
@@ -126,21 +126,21 @@ Sample costs:
 | Rarity | 50 | 110 | 242 | 2,577 | – | – | – | 482,908 (Lv 9) |
 | Coin speed | 15 | 45 | 133 | 3,525 | – | – | – | 277,995 (Lv 9) |
 
-Total cost to max everything ≈ 20.5M – far beyond one run; Value's top levels are the long-term sink.
+Total cost to max everything ≈ 8.0M – far beyond the first run; Value's top levels are the long-term sink.
 
 ### Balance target
 
-**First run: earn 1M coins (total earned, not held) in ~18 minutes of active play, buying upgrades as soon as they're affordable.**
+**First run: earn 1M coins (total earned, not held) in ~14 minutes of active play, buying upgrades as soon as they're affordable.**
 
 Checked with the balance simulator ([scripts/balance-sim.ts](../scripts/balance-sim.ts) + [scripts/bot.ts](../scripts/bot.ts)): a bot plays the real game logic – dodges nearby anti-coins and their warnings, chases the nearest good coin, fires Pulse when 3+ coins are on the board, and always buys the cheapest affordable upgrade.
 
 | Milestone (earned this run) | Slow (250 px/s) | Average (400 px/s) | Fast (600 px/s) |
 |---|---|---|---|
-| 100 | 0:44 | 0:34 | 0:32 |
-| 1,000 | 1:56 | 1:25 | 1:12 |
-| 10,000 | 4:29 | 3:41 | 2:51 |
-| 100,000 | 7:36 | 6:23 | 5:25 |
-| **1,000,000** | **20:47** | **18:06** | **15:49** |
+| 100 | 0:41 | 0:30 | 0:28 |
+| 1,000 | 1:47 | 1:20 | 1:07 |
+| 10,000 | 3:53 | 3:10 | 2:26 |
+| 100,000 | 6:48 | 5:15 | 4:34 |
+| **1,000,000** | **16:16** | **14:00** | **12:17** |
 | catch rate | 66% | 75% | 83% |
 
 Player skill matters (~5 min between a fast and a slow player): combo, anti-coins and Pulse all reward active play.
@@ -149,43 +149,43 @@ Later runs (bot; after each shift it spends Cores on the cheapest purchasable no
 
 | Run | Goal | Cores earned before the run | Slow (250) | Average (400) | Fast (600) |
 |---|---|---|---|---|---|
-| 1 | 1M | 0 | 20:47 | 18:06 | 15:49 |
-| 2 | 2.5M | 10 | 18:17 | 16:59 | 15:43 |
-| 3 | 4M | 20 | 13:38 | 13:18 | 12:17 |
-| 4 | 5.5M | 30 | 11:55 | 11:46 | 10:59 |
-| 5 | 7M | 40 | 9:40 | 9:07 | 8:47 |
-| 6 | 8.5M | 50 | 8:43 | 8:15 | 7:27 |
-| 7 | 10M | 60 | 6:16 | 6:08 | 5:49 |
-| 8 | 11.5M | 70 | 5:25 | 5:09 | 4:49 |
-| 9 | 13M | 80 | 4:54 | 4:42 | 4:32 |
-| 10 | 14.5M | 90 | 3:44 | 3:21 | 3:22 |
-| 12 | 17.5M | 110 | 2:48 | 2:31 | 2:09 |
-| 15 | 22M | 140 | 1:41 | 1:36 | 1:24 |
+| 1 | 1M | 0 | 16:16 | 14:00 | 12:17 |
+| 2 | 2.5M | 10 | 14:04 | 12:25 | 11:48 |
+| 3 | 4M | 20 | 10:19 | 9:48 | 9:13 |
+| 4 | 5.5M | 30 | 9:17 | 8:37 | 8:29 |
+| 5 | 7M | 40 | 7:09 | 6:47 | 6:41 |
+| 6 | 8.5M | 50 | 6:27 | 5:59 | 6:03 |
+| 7 | 10M | 60 | 4:47 | 4:33 | 4:30 |
+| 8 | 11.5M | 70 | 4:03 | 3:57 | 3:52 |
+| 9 | 13M | 80 | 3:35 | 3:40 | 3:31 |
+| 10 | 14.5M | 90 | 2:51 | 2:49 | 2:40 |
+| 12 | 17.5M | 110 | 1:59 | 2:09 | 1:58 |
+| 15 | 22M | 140 | 1:27 | 1:29 | 1:18 |
 
-The greedy bot buys the cheapest nodes first, so it reaches M5 nodes very late (only Chain Reaction, from run 13) – the table is mostly the non-M5 tree. Runs drop under 3 min from run 11 even without M5 nodes: **late-run balance is the next roadmap item.** An exponential goal (×2–3 per shift) was tried and rejected: in-run income has a ceiling (upgrade caps), so from run 5 the goal took hours. Goal step 1.5 (instead of 1) compensates for Lodestones.
+The greedy bot buys the cheapest nodes first, so it reaches M5 nodes very late (only Chain Reaction, from run 13) – the table is mostly the non-M5 tree. Runs drop under 3 min from run 10 even without M5 nodes: **late-run balance is the next roadmap item.** An exponential goal (×2–3 per shift) was tried and rejected: in-run income has a ceiling (upgrade caps), so from run 5 the goal took hours. Goal step 1.5 (instead of 1) compensates for Lodestones.
 
 **M5 node impact** (`npm run sim:m5 -- [shifts=9] [seeds=3]`): the same run 10 (goal 14.5M, greedy tree from 9 shifts) played by the average bot with one M5 node added, and an idle run with nobody touching the mouse:
 
 | Added to the run-10 tree | Run time | vs. without |
 |---|---|---|
-| – | 3:21 | – |
-| Satellites 1 / 3 | 3:11 / 3:08 | −5% / −6% |
-| Chain Reaction | 3:19 | −1% |
-| Void Coin | 3:15 | −3% |
-| Interest | 3:18 | −1% (the bot spends everything at once; Interest rewards saving up) |
-| Drones 1 / 3 | 3:22 / 3:05 | +1% / −8% |
-| all M5 nodes | 2:55 | −13% |
+| – | 2:49 | – |
+| Satellites 1 / 3 | 2:50 / 2:44 | +1% / −3% |
+| Chain Reaction | 2:48 | −0% |
+| Void Coin | 2:44 | −3% |
+| Interest | 2:44 | −3% (the bot spends everything at once; Interest rewards saving up) |
+| Drones 1 / 3 | 2:40 / 2:36 | −5% / −8% |
+| all M5 nodes | 2:23 | −15% |
 
 | Idle (no cursor), Auto-buyer + | Income over 10 min |
 |---|---|
-| Drones 1 | 31k /s |
-| Drones 2 | 56k /s |
-| Drones 3 | 70k /s |
-| *(active average bot, no Drones)* | *72k /s* |
+| Drones 1 | 36k /s |
+| Drones 2 | 57k /s |
+| Drones 3 | 73k /s |
+| *(active average bot, no Drones)* | *86k /s* |
 
-In active play the keystones are a modest boost; their big effect is idle play – 3 Drones earn about as much as an active player (see Open questions).
+In active play the keystones are a modest boost; their big effect is idle play – 3 Drones earn ~85% of an active player's income (see Open questions).
 
-Run: `npm run sim -- [cursorSpeed] [runs] [shifts]`. Quick tuning without editing files: `OV='{"value":{"growth":1.6}}' npm run sim`. `npm test` includes a guard that the average bot reaches 1M in the first run in 16–20 min.
+Run: `npm run sim -- [cursorSpeed] [runs] [shifts]`. Quick tuning without editing files: `OV='{"value":{"growth":1.5}}' npm run sim`. `npm test` includes a guard that the average bot reaches 1M in the first run in 12–16 min.
 
 ### Lodestones – the Magnetron (gacha)
 
@@ -294,7 +294,7 @@ Numbers live in `src/data/tuning.ts` (`SATELLITES`, `DRONES`, `CHAIN`, `INTEREST
 
 ## Debug URL params (testing)
 
-Work on `npm run dev` / `npm run preview`: `?nosave=1` don't load/write the save · `?reset=1` clear the save · `?warm=N` fast-forward N seconds · `?earned=N` start as if N coins were earned (unlocks + money) · `?rare=1` boost rare coin chances (Void too, if its keystone is owned) · `?anti=1` boost anti-coin chance to 30% (needs `earned` ≥ 25000) · `?cores=N` set unspent Cores · `?open=shift` open the Core tree to spend Cores (with `earned=1000000`) · `?open=browse` open the tree preview · `?shifts=N` set completed shifts · `?crystals=N` set Charge Crystals · `?pulls=N` pull N lodestones on load · `?open=gacha` open the Magnetron · `?nodes=Nkey:3,Wb2` own Core tree nodes (id with an optional level; `all` = every node maxed). Combine with `&`.
+Work on `npm run dev` / `npm run preview`: `?nosave=1` don't load/write the save · `?reset=1` clear the save · `?warm=N` fast-forward N seconds · `?speed=N` run the game clock N× faster (1–50) · `?earned=N` start as if N coins were earned (unlocks + money) · `?rare=1` boost rare coin chances (Void too, if its keystone is owned) · `?anti=1` boost anti-coin chance to 30% (needs `earned` ≥ 25000) · `?cores=N` set unspent Cores · `?open=shift` open the Core tree to spend Cores (with `earned=1000000`) · `?open=browse` open the tree preview · `?shifts=N` set completed shifts · `?crystals=N` set Charge Crystals · `?pulls=N` pull N lodestones on load · `?open=gacha` open the Magnetron · `?nodes=Nkey:3,Wb2` own Core tree nodes (id with an optional level; `all` = every node maxed). Combine with `&`.
 
 ## Out of scope (for now)
 
@@ -309,5 +309,5 @@ Work on `npm run dev` / `npm run preview`: `?nosave=1` don't load/write the save
 - Prism coins (×3 speed) cross half the board in ~0.6 s – check in playtesting whether they're catchable or just frustrating.
 - Combo stays at ×2 for most of the mid/late game for a good player – maybe raise the cap via upgrades or prestige.
 - Miss sparks at the board edge may get noisy late game (many misses per second).
-- Drones are very strong for idle play: 3 Drones + Auto-buyer earn ~97% of an active player's income with nobody at the mouse. Fine for "the game plays itself", or tune down (e.g. Drone speed 140 → 100 px/s or field 45% → 35%) so active play stays clearly better? Needs a target.
-- Keystones give only −1…−8% run time in active play (Satellites 3: −6% for 45 Cores) – consider buffing them in the late-run balance pass.
+- Drones are very strong for idle play: 3 Drones + Auto-buyer earn ~85% of an active player's income with nobody at the mouse. Fine for "the game plays itself", or tune down (e.g. Drone speed 140 → 100 px/s or field 45% → 35%) so active play stays clearly better? Needs a target.
+- Keystones give only 0…−8% run time in active play (Satellites 3: −3% for 45 Cores) – consider buffing them in the late-run balance pass.

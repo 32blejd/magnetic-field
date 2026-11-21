@@ -8,7 +8,7 @@ import { S } from '../src/ui/strings';
 describe('mini-goals', () => {
   it('match the agreed list', () => {
     expect(GOALS.map(g => g.id)).toEqual([
-      'coins-10', 'coins-100', 'coins-1000', 'coins-10000',
+      'coins-10', 'coins-100', 'coins-1000', 'coins-5000',
       'anti-1',
       'gold-10', 'gold-50', 'gold-100',
       'prism-3', 'prism-7', 'prism-11', 'prism-49',

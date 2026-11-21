@@ -83,7 +83,7 @@ export class Effects {
           if (st.meta.shifts > 0 && e.id !== 'anti') break;
           const b = FEATURE_BANNERS[e.id];
           const color = e.id === 'anti' ? COLORS.red : e.id === 'combo' ? COLORS.amber : COLORS.magenta;
-          this.banner(b.title, b.sub, color, 3.2);
+          this.banner(b.title, b.sub, color, 6.2);
           break;
         }
         case 'meteor':

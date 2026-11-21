@@ -10,7 +10,7 @@ describe('upgrade effects', () => {
     expect(atMax('range')).toBe(130);
     expect(atMax('spawn')).toBeCloseTo(13.74, 2);
     expect(atMax('strength')).toBeCloseTo(8.18, 2);
-    expect(atMax('capacity')).toBe(48);
+    expect(atMax('capacity')).toBe(83);
     expect(atMax('rarity')).toBeCloseTo(0.05);
     expect(atMax('speed')).toBeCloseTo(3.6, 1);
   });

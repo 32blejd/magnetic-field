@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { AUTO_SHIFT_TARGETS } from '../src/data/prestige';
 import { VOID_TIER } from '../src/data/tiers';
 import { ANTI, AUTO, BOARD, CHAIN, INTEREST, PULSE, SATELLITES, STEP } from '../src/data/tuning';
-import { parseNodes } from '../src/debug';
+import { parseNodes, readDebugOptions } from '../src/debug';
 import { satellitePositions } from '../src/game/helpers';
 import { goalReward } from '../src/game/money';
 import {
@@ -297,5 +297,15 @@ describe('debug ?nodes=', () => {
     expect(parseNodes(null)).toBeNull();
     expect(parseNodes('Nkey:3,Wb2,bogus,core,Ekey:9')).toEqual({ Nkey: 3, Wb2: 1, Ekey: 1 });
     expect(parseNodes('all')!.Wkey).toBe(3);
+  });
+});
+
+describe('debug ?speed=', () => {
+  it('defaults to 1 and clamps to 1–50', () => {
+    expect(readDebugOptions('').speed).toBe(1);
+    expect(readDebugOptions('?speed=4').speed).toBe(4);
+    expect(readDebugOptions('?speed=999').speed).toBe(50);
+    expect(readDebugOptions('?speed=0.1').speed).toBe(1);
+    expect(readDebugOptions('?speed=abc').speed).toBe(1);
   });
 });

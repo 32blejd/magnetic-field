@@ -14,12 +14,17 @@ export interface InputHandlers {
   onKey(code: string, shift: boolean): boolean;
 }
 
+/** Client (CSS pixel) position → logical view coordinates. The 16:9 picture may be letterboxed inside the
+    element box (object-fit: contain), so scale uniformly and center instead of stretching to the box. */
+export function clientToView(clientX: number, clientY: number, r: { left: number; top: number; width: number; height: number }): Vec {
+  const scale = Math.min(r.width / VIEW.w, r.height / VIEW.h);
+  const ox = r.left + (r.width - VIEW.w * scale) / 2, oy = r.top + (r.height - VIEW.h * scale) / 2;
+  return { x: (clientX - ox) / scale, y: (clientY - oy) / scale };
+}
+
 /** Wires mouse and keyboard to the handlers; positions are converted to logical view coordinates. */
 export function setupInput(canvas: HTMLCanvasElement, h: InputHandlers): void {
-  const toView = (e: MouseEvent): Vec => {
-    const r = canvas.getBoundingClientRect();
-    return { x: ((e.clientX - r.left) * VIEW.w) / r.width, y: ((e.clientY - r.top) * VIEW.h) / r.height };
-  };
+  const toView = (e: MouseEvent): Vec => clientToView(e.clientX, e.clientY, canvas.getBoundingClientRect());
   canvas.addEventListener('mousemove', e => h.onMove(toView(e)));
   canvas.addEventListener('mouseleave', () => h.onLeave());
   canvas.addEventListener('mousedown', e => { if (e.button === 0) h.onDown(toView(e)); });

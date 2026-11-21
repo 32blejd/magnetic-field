@@ -232,7 +232,7 @@ function frame(now: number): void {
   last = now;
   uiTime += dt;
   if (screen === 'run') {
-    acc += dt;
+    acc += dt * debug.speed; // ?speed=N: more fixed steps per frame, never a longer step
     while (acc >= STEP) { tick(); acc -= STEP; }
   } else acc = 0; // the run is paused while the Core tree is open
   if (magnetron) magnetron.revealT += dt;

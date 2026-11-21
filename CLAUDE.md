@@ -25,7 +25,7 @@ npm run sim:m5 -- [shifts=9] [seeds=3]       # impact of each M5 node on a late 
 
 `npm test` goes through `scripts/vitest.mjs`, which upper-cases the drive letter of the working directory first. On Windows a `c:\…` cwd (e.g. a VS Code terminal) makes Vitest load itself twice and every test fails with "Cannot read properties of undefined (reading 'config')". Don't call `vitest` directly.
 
-Debug URL params (dev or preview): `?nosave=1`, `?reset=1`, `?earned=N`, `?cores=N`, `?shifts=N`, `?crystals=N`, `?pulls=N`, `?open=shift|browse|gacha`, `?warm=N`, `?rare=1`, `?anti=1`, `?nodes=Nkey:3,Wb2|all` – see `src/debug.ts`.
+Debug URL params (dev or preview): `?nosave=1`, `?reset=1`, `?earned=N`, `?cores=N`, `?shifts=N`, `?crystals=N`, `?pulls=N`, `?open=shift|browse|gacha`, `?warm=N`, `?speed=N`, `?rare=1`, `?anti=1`, `?nodes=Nkey:3,Wb2|all` – see `src/debug.ts`.
 
 ## Structure
 
@@ -66,4 +66,4 @@ docs/        # DESIGN.md – game design, numbers, balance tables; docs/mockups/
 - Everything in English: code, comments, docs and UI text. All player-facing strings live in `src/ui/strings.ts`.
 - Small pure functions in `game/`; side effects (DOM, localStorage, time) only in `main.ts`/`ui/input.ts`.
 - Counts and amounts shown to the player always go through `formatNumber`/`formatShort` before reaching a string in `ui/strings.ts`; seconds, percentages and multipliers use fixed precision (`toFixed`/`Math.round`).
-- After logic or tuning changes run `npm test` (includes a balance guard: average bot reaches 1M in the first run in 16–20 min, target 18) and, for tuning, `npm run sim` at 250/400/600 and update DESIGN.md. After UI changes check the game in `npm run dev`.
+- After logic or tuning changes run `npm test` (includes a balance guard: average bot reaches 1M in the first run in 12–16 min, target 14) and, for tuning, `npm run sim` at 250/400/600 and update DESIGN.md. After UI changes check the game in `npm run dev`.

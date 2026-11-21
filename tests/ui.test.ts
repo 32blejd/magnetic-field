@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { coinValue, earnedShare, hasEarned } from '../src/game/money';
 import { createState } from '../src/game/state';
 import { formatNumber, formatShort, formatUpgradeValue } from '../src/ui/format';
+import { clientToView } from '../src/ui/input';
 import { S } from '../src/ui/strings';
 
 describe('number formatting', () => {
@@ -29,5 +30,15 @@ describe('currency helpers', () => {
     expect(earnedShare(st, 1_000_000)).toBe(0.25);
     st.totalEarned = 2_000_000;
     expect(earnedShare(st, 1_000_000)).toBe(1);
+  });
+});
+
+describe('mouse mapping', () => {
+  it('maps client pixels to view coordinates, also when the picture is letterboxed', () => {
+    expect(clientToView(960, 540, { left: 0, top: 0, width: 1920, height: 1080 })).toEqual({ x: 480, y: 270 });
+    // 1920×900 box: the 16:9 picture is 1600 wide, centered with 160 px bars on each side
+    expect(clientToView(160, 0, { left: 0, top: 0, width: 1920, height: 900 })).toEqual({ x: 0, y: 0 });
+    expect(clientToView(1760, 900, { left: 0, top: 0, width: 1920, height: 900 })).toEqual({ x: 960, y: 540 });
+    expect(clientToView(110, 70, { left: 10, top: 20, width: 960, height: 1000 })).toEqual({ x: 100, y: -180 });
   });
 });
