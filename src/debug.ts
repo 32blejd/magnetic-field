@@ -9,12 +9,18 @@
    ?anti=1      boost anti-coin chance (needs earned ≥ 25000)
    ?open=shift  open the Core tree on load (shift = spend Cores, needs the goal earned; browse = preview; gacha = Magnetron)
    ?nodes=…     own Core tree nodes: comma-separated ids with an optional level (Nkey:3,Wb2), or "all" for every node maxed
-   ?nosave=1    don't load or write the save */
+   ?nosave=1    don't load or write the save
+   Any of these params skips the title screen and starts the run right away. */
 import { NODES, NODE_BY_ID } from './data/prestige';
 import { TIERS, VOID_TIER } from './data/tiers';
 import { ANTI } from './data/tuning';
 
+/** Params listed above; any of them in the URL skips the title screen. */
+export const DEBUG_PARAMS = ['reset', 'nosave', 'earned', 'cores', 'crystals', 'shifts', 'pulls', 'warm', 'speed', 'rare', 'anti', 'open', 'nodes'] as const;
+
 export interface DebugOptions {
+  /** A debug param is present: start the run directly, without the title screen. */
+  skipTitle: boolean;
   reset: boolean;
   noSave: boolean;
   earned: number;
@@ -56,6 +62,7 @@ export function readDebugOptions(search: string): DebugOptions {
   }
   if (p.get('anti')) ANTI.chance = 0.3;
   return {
+    skipTitle: DEBUG_PARAMS.some(k => p.has(k)),
     reset: p.has('reset'),
     noSave: p.has('nosave'),
     earned: Number(p.get('earned')) || 0,

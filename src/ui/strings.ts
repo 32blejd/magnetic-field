@@ -200,3 +200,54 @@ export const S = {
   shiftDoneSub: (goal: string) => `New goal: earn ${goal} this run · your Core tree is active`,
   saveUnreadable: { title: 'SAVE COULD NOT BE LOADED', sub: 'Starting a new run. The old save was kept as a backup copy.' },
 };
+
+/** Title screen, New Game confirm, pause menu, settings. */
+export const MENU = {
+  logo1: 'MAGNETIC',
+  logo2: 'FIELD',
+  tagline: 'pull in the coins · shift the poles',
+  continue: 'CONTINUE',
+  newGame: 'NEW GAME',
+  settings: 'SETTINGS',
+  enterKey: '[Enter]',
+  escKey: '[Esc]',
+  /** Summary under CONTINUE / in the New Game confirm. Numbers arrive formatted. */
+  shiftSummary: (shifts: string, cores: string, time: string) => `Shift ${shifts} · ${cores} ◆ · run ${time}`,
+  firstRunSummary: (time: string, coins: string) => `First run · ${time} · ${coins} coins`,
+  savedAgo: (seconds: number) =>
+    seconds < 60 ? 'saved just now'
+      : seconds < 3600 ? `saved ${Math.floor(seconds / 60)} min ago`
+        : seconds < 172800 ? `saved ${Math.floor(seconds / 3600)} h ago`
+          : `saved ${Math.floor(seconds / 86400)} days ago`,
+  footer: (autosave: string) => `autosaves every ${autosave} s · Esc pauses the run`,
+  saveUnreadable: 'Your save could not be loaded – a backup copy was kept.',
+
+  newGameTitle: 'START A NEW GAME?',
+  newGameErased: 'Your current save will be erased:',
+  newGameShift: (shifts: string, cores: string, lodestones: string, time: string) =>
+    `Shift ${shifts} · ${cores} ◆ Cores · ${lodestones} Lodestones · run ${time}`,
+  newGameFirst: (time: string, coins: string) => `First run · ${time} played · ${coins} coins earned`,
+  newGameWarning: "This can't be undone.",
+  newGameErase: 'ERASE & START',
+  newGameCancel: 'CANCEL',
+
+  gearHint: 'MENU  [Esc]',
+  pauseTitle: 'PAUSED',
+  pauseSub: 'the run is frozen while this is open',
+  resume: 'RESUME',
+  backToMenu: 'BACK TO MENU',
+  pauseFoot: 'progress is saved when you leave',
+
+  settingsTitle: 'SETTINGS',
+  sound: 'SOUND',
+  soundSoon: 'coming soon – sliders are saved already',
+  volume: { master: 'MASTER VOLUME', music: 'MUSIC', effects: 'EFFECTS' },
+  display: 'DISPLAY',
+  screenShake: 'SCREEN SHAKE',
+  screenShakeNote: 'anti-coin hits',
+  fullscreen: 'FULLSCREEN',
+  fullscreenNote: '[F11]',
+  on: 'ON',
+  off: 'OFF',
+  back: '◀  BACK',
+};

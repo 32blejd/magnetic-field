@@ -114,6 +114,8 @@ export interface LoadResult {
   state: GameState | null;
   /** True when a save existed but couldn't be read; its text was copied to BACKUP_KEY. */
   movedToBackup: boolean;
+  /** When the loaded save was written (ms since epoch), or null. */
+  savedAt: number | null;
 }
 
 /**
@@ -122,12 +124,19 @@ export interface LoadResult {
  */
 export function loadGame(storage: StorageLike): LoadResult {
   let text: string | null;
-  try { text = storage.getItem(SAVE_KEY); } catch { return { state: null, movedToBackup: false }; }
-  if (!text) return { state: null, movedToBackup: false };
+  try { text = storage.getItem(SAVE_KEY); } catch { return { state: null, movedToBackup: false, savedAt: null }; }
+  if (!text) return { state: null, movedToBackup: false, savedAt: null };
   const state = deserialize(text);
-  if (state) return { state, movedToBackup: false };
+  if (state) return { state, movedToBackup: false, savedAt: savedAtOf(text) };
   try { storage.setItem(BACKUP_KEY, text); } catch { /* ignore */ }
-  return { state: null, movedToBackup: true };
+  return { state: null, movedToBackup: true, savedAt: null };
+}
+
+function savedAtOf(text: string): number | null {
+  try {
+    const t: unknown = (JSON.parse(text) as { savedAt?: unknown }).savedAt;
+    return typeof t === 'number' && Number.isFinite(t) ? t : null;
+  } catch { return null; }
 }
 
 export function clearSave(storage: StorageLike): void {

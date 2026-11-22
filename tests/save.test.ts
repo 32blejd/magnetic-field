@@ -53,6 +53,7 @@ describe('save', () => {
     const loaded = loadGame(storage);
     expect(loaded.state?.money).toBe(1234);
     expect(loaded.movedToBackup).toBe(false);
+    expect(typeof loaded.savedAt).toBe('number');
     expect(importSave(exportSave(playedState()))?.levels.value).toBe(3);
   });
 
@@ -99,6 +100,6 @@ describe('save', () => {
     expect(deserialize('{}')).toBeNull();
     expect(migrate({ version: 99, money: 1 })).toBeNull();
     expect(importSave('%%%')).toBeNull();
-    expect(loadGame(memoryStorage())).toEqual({ state: null, movedToBackup: false });
+    expect(loadGame(memoryStorage())).toEqual({ state: null, movedToBackup: false, savedAt: null });
   });
 });

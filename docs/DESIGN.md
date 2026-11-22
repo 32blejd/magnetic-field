@@ -78,6 +78,14 @@ The target feeling: every upgrade is **visible on screen** (bigger field, more c
 - Upgrade panel on the right, full height. Exactly 7 rows fit.
 - **Keyboard:** keys 1–7 (top row or numpad) buy the upgrade in that panel row, so the player can keep the cursor on the board. Each row shows its key next to the level (`Lv 3/20  [2]`).
 
+### Menus (mockup: [mockups/menu.html](mockups/menu.html))
+
+- **Title screen** on every launch, including the very first one: logo over a slow animated magnet field, then `CONTINUE` (only when a save exists; shows `Shift N · X ◆ · run m:ss · saved … ago`, or `First run · m:ss · N coins` before the first shift), `NEW GAME` and `SETTINGS`. `Enter` = Continue (or New Game when there is no save). Nothing is saved while the title is open, so a first launch that never starts a run leaves no save behind.
+- **New Game** with a save asks first (`START A NEW GAME?`, what will be erased, `ERASE & START` / `CANCEL` or `Esc`); without a save it starts right away. Settings are not erased.
+- **Pause menu**: `⚙` button in the panel header (hint `MENU [Esc]`) or `Esc` during a run. The run is frozen; `RESUME` (`Esc`), `SETTINGS`, `BACK TO MENU` (saves first).
+- **Settings** (from the title or the pause menu, `Esc` = back): master / music / effects volume sliders (placeholders until there is sound, but saved), Screen shake toggle (anti-coin hits), Fullscreen toggle (also `F11`; follows the browser state, not saved). Stored apart from the game save under `magnetic-field-settings` (no version; unknown or wrong fields fall back to defaults).
+- Any debug URL param skips the title screen and starts the run directly.
+
 ## Hosting
 
 Local only for now (`npm run dev` / `npm run preview`).
@@ -291,13 +299,13 @@ Numbers live in `src/data/tuning.ts` (`SATELLITES`, `DRONES`, `CHAIN`, `INTEREST
 | **M3** | Events, Pulse, anti-coins, run stats, mini-goals | the main loop has variety and rewards skill | ✅ |
 | **M4** | Polarity Shift: Cores, Core tree screen (browse from 100k, spend on shift, confirm), simple nodes (stat bonuses) | there's a reason to start over | ✅ |
 | **M5** | Lodestones / Magnetron ✅ · keystones and mechanics from the tree: Satellites, Void Coin, Chain Reaction, Interest, auto-buyer, Auto-pulse, Auto-shift, Drones ✅ | the game partly plays itself | ✅ (look chosen from [mockups/m5-visuals.html](mockups/m5-visuals.html): variant B) |
-| **M6** | Polish: sounds, more particles, save export UI, satellites | the game *feels* good | |
+| **M6** | Polish: title screen, pause menu and settings ✅ · sounds, more particles, save export UI | the game *feels* good | |
 
 **MVP = M0–M2.** Collecting coins has to be fun on its own before we add more systems. M0–M3 were built by porting a single-file JS prototype to TypeScript (`src/`). The prototype was then removed so the numbers live in one place; it's still in the git history (first commit, `docs/mockups/`).
 
 ## Debug URL params (testing)
 
-Work on `npm run dev` / `npm run preview`: `?nosave=1` don't load/write the save · `?reset=1` clear the save · `?warm=N` fast-forward N seconds · `?speed=N` run the game clock N× faster (1–50) · `?earned=N` start as if N coins were earned (unlocks + money) · `?rare=1` boost rare coin chances (Void too, if its keystone is owned) · `?anti=1` boost anti-coin chance to 30% (needs `earned` ≥ 25000) · `?cores=N` set unspent Cores · `?open=shift` open the Core tree to spend Cores (with `earned=1000000`) · `?open=browse` open the tree preview · `?shifts=N` set completed shifts · `?crystals=N` set Charge Crystals · `?pulls=N` pull N lodestones on load · `?open=gacha` open the Magnetron · `?nodes=Nkey:3,Wb2` own Core tree nodes (id with an optional level; `all` = every node maxed). Combine with `&`.
+Work on `npm run dev` / `npm run preview`: `?nosave=1` don't load/write the save · `?reset=1` clear the save · `?warm=N` fast-forward N seconds · `?speed=N` run the game clock N× faster (1–50) · `?earned=N` start as if N coins were earned (unlocks + money) · `?rare=1` boost rare coin chances (Void too, if its keystone is owned) · `?anti=1` boost anti-coin chance to 30% (needs `earned` ≥ 25000) · `?cores=N` set unspent Cores · `?open=shift` open the Core tree to spend Cores (with `earned=1000000`) · `?open=browse` open the tree preview · `?shifts=N` set completed shifts · `?crystals=N` set Charge Crystals · `?pulls=N` pull N lodestones on load · `?open=gacha` open the Magnetron · `?nodes=Nkey:3,Wb2` own Core tree nodes (id with an optional level; `all` = every node maxed). Combine with `&`. Any of these params skips the title screen.
 
 ## Out of scope (for now)
 

@@ -31,6 +31,8 @@ export class Effects {
   /** "+X" pops next to the wallet when a mini-goal pays out. */
   goalPops: { text: string; life: number; color?: string }[] = [];
   shake = 0;
+  /** Settings → Screen shake. */
+  shakeOn = true;
   private earned: { t: number; v: number }[] = [];
   private trails = new WeakMap<Coin, Vec[]>();
   private drones = new WeakMap<Vec, DroneLook>();
@@ -62,7 +64,7 @@ export class Effects {
           this.burst(e.coin.x, e.coin.y, 24, 160, 'anti', 0.6);
           this.shocks.push({ x: e.coin.x, y: e.coin.y, life: 0.4, max: 0.4, radius: 40, kind: 'anti' });
           this.floats.push({ x: e.coin.x, y: e.coin.y - 10, life: 1.2, text: S.shortCircuit, tier: 'anti' });
-          this.shake = 0.3;
+          if (this.shakeOn) this.shake = 0.3;
           break;
         case 'miss':
           this.burst(clamp(e.coin.x, BOARD.x, BOARD.x + BOARD.w), clamp(e.coin.y, BOARD.y, BOARD.y + BOARD.h), 4, 50, 'anti', 0.3);
