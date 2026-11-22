@@ -4,7 +4,7 @@ import type { StorageLike } from './save';
 export const SETTINGS_KEY = 'magnetic-field-settings';
 
 export interface Settings {
-  /** Volumes 0–1. Placeholders until there is sound, but already saved. */
+  /** Volumes 0–1. Effects play at master × effects; music is a placeholder (saved, nothing plays yet). */
   master: number;
   music: number;
   effects: number;

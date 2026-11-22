@@ -1,3 +1,5 @@
+import { CueGate, cuesFor, nodeCue, revealCues, type SoundId } from './audio/cues';
+import { Synth } from './audio/synth';
 import { readDebugOptions } from './debug';
 import { BOARD, STEP, VIEW } from './data/tuning';
 import { triggerPulse } from './game/abilities';
@@ -6,7 +8,7 @@ import {
   autoShiftDue, bonuses, buyNode, canShift, openStage, commitAutoShift, commitShift, nextAutoShiftTarget, refundNode, resetDraft, shiftGoal, startDraft,
   treeUnlocked,
 } from './game/prestige';
-import { buy, buyMax, canBuy } from './game/shop';
+import { buy, buyMax, canBuy, isMaxed } from './game/shop';
 import { step } from './game/simulation';
 import { createState } from './game/state';
 import { getStats } from './game/stats';
@@ -24,7 +26,7 @@ import { AUTOSAVE_INTERVAL, clearSave, loadGame, saveGame, type LoadResult } fro
 import { loadSettings, saveSettings, type VolumeId } from './save/settings';
 import { rowKey, setupInput } from './ui/input';
 import { AUTO_BUY_BUTTON, AUTO_SHIFT_BUTTON, MAGNETRON_BUTTON, PRESTIGE_BUTTON, buttonRect, inRect, visibleRows } from './ui/layout';
-import { MAG_BACK, PULL1, PULL10, newMagnetronView, type MagnetronView } from './ui/magnetronLayout';
+import { MAG_BACK, PULL1, PULL10, REVEAL_STEP, newMagnetronView, type MagnetronView } from './ui/magnetronLayout';
 import {
   ENDING_BUTTON, GEAR_BUTTON, NEWGAME_CANCEL, NEWGAME_ERASE, PAUSE_BUTTONS, SETTINGS_BACK, STATS_BOX, SLIDERS, TOGGLES, sliderHit, sliderValue, titleButtons,
 } from './ui/menuLayout';
@@ -60,6 +62,15 @@ if (debug.pulls) { st.meta.crystals += debug.pulls * 10; pullMany(st, debug.pull
 if (debug.nodes) st.meta.nodes = { ...st.meta.nodes, ...debug.nodes };
 const fx = new Effects();
 fx.shakeOn = settings.screenShake;
+// Sound: synthesized effects, silent until the first click or key press (browser autoplay rules)
+const sfx = new Synth();
+const cueGate = new CueGate();
+const applyVolume = (): void => sfx.setVolume(settings.master * settings.effects);
+applyVolume();
+window.addEventListener('pointerdown', () => sfx.unlock());
+window.addEventListener('keydown', () => sfx.unlock());
+const sound = (id: SoundId): void => sfx.play({ id });
+const click = (): void => sound('uiClick');
 if (loaded.movedToBackup) fx.banner(S.saveUnreadable.title, S.saveUnreadable.sub, COLORS.red, 6);
 const events: GameEvent[] = [];
 let cursor: Vec | null = null;
@@ -91,6 +102,7 @@ function tick(): void {
   events.length = 0;
   step(st, STEP, magnet(), events);
   fx.handle(events, st);
+  for (const c of cuesFor(events, st.combo, cueGate, performance.now() / 1000)) sfx.play(c);
   fx.update(STEP, st);
   if (autoShiftDue(st)) autoShift();
 }
@@ -98,6 +110,7 @@ function tick(): void {
 /** Auto-shift: restart the run on the spot, banking this run's Cores (no tree screen, no pause). */
 function autoShift(): void {
   const gained = commitAutoShift(st);
+  sound('autoShift');
   fx.reset();
   fx.banner(S.autoShiftDone(formatNumber(st.meta.shifts)), S.autoShiftDoneSub(formatNumber(gained), formatNumber(st.meta.cores), formatShort(shiftGoal(st.meta))), COLORS.green, 4);
   lastBoardPos = null;
@@ -106,12 +119,14 @@ function autoShift(): void {
 function cycleAutoShift(): void {
   if (!autoShiftVisible(st)) return;
   st.meta.autoShift = nextAutoShiftTarget(st.meta.autoShift);
+  click();
   save();
 }
 /** Pause / resume the Auto-buyer (only once its node is owned). */
 function toggleAutoBuy(): void {
   if (!bonuses(st.meta).autoBuy) return;
   st.meta.autoBuyOff = !st.meta.autoBuyOff;
+  click();
   save();
 }
 for (let i = 0; i < debug.warm / STEP; i++) tick();
@@ -127,16 +142,20 @@ function play(fresh: boolean): void {
   }
   hasRun = inGame = true;
   screen = 'run';
+  click();
   save();
 }
-function backToMenu(): void { save(); inGame = false; screen = 'title'; }
-function openStats(from: 'run' | 'pause'): void { statsFrom = from; screen = 'stats'; }
-function closeStats(): void { screen = statsFrom; }
-function openSettings(from: 'title' | 'pause'): void { settingsFrom = from; screen = 'settings'; }
-function closeSettings(): void { dragSlider = null; saveSettings(settings, localStorage); screen = settingsFrom; }
+function backToMenu(): void { save(); inGame = false; screen = 'title'; click(); }
+function openPause(): void { screen = 'pause'; click(); }
+function resume(): void { screen = 'run'; click(); }
+function openStats(from: 'run' | 'pause'): void { statsFrom = from; screen = 'stats'; click(); }
+function closeStats(): void { screen = statsFrom; click(); }
+function openSettings(from: 'title' | 'pause'): void { settingsFrom = from; screen = 'settings'; click(); }
+function closeSettings(): void { dragSlider = null; saveSettings(settings, localStorage); screen = settingsFrom; click(); }
 function setVolume(id: VolumeId, x: number): void {
   const s = SLIDERS.find(r => r.id === id);
   if (s) settings[id] = Math.round(sliderValue(s.track, x) * 100) / 100;
+  applyVolume();
 }
 function toggleFullscreen(): void {
   if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
@@ -145,14 +164,19 @@ function toggleFullscreen(): void {
 function openTree(mode: TreeMode): void {
   tree = newTreeView(mode, mode === 'shift' ? startDraft(st) : null, openStage(st.meta.nodes));
   screen = 'tree';
+  click();
 }
-function closeTree(): void { tree = null; screen = 'run'; }
-function openMagnetron(): void { if (magnetronUnlocked(st)) { magnetron = newMagnetronView(); screen = 'gacha'; } }
-function closeMagnetron(): void { magnetron = null; screen = 'run'; }
+function closeTree(): void { tree = null; screen = 'run'; click(); }
+function openMagnetron(): void { if (magnetronUnlocked(st)) { magnetron = newMagnetronView(); screen = 'gacha'; click(); } }
+function closeMagnetron(): void { magnetron = null; screen = 'run'; click(); }
 function doPull(count: number): void {
   if (!magnetron) return;
   const res = pullMany(st, count);
-  if (res.length) { magnetron.results = res; magnetron.revealT = 0; save(); }
+  if (!res.length) { sound('buyFail'); return; }
+  magnetron.results = res; magnetron.revealT = 0;
+  sound('pull');
+  for (const c of revealCues(res.map(r => r.def.rarity), REVEAL_STEP)) sfx.play(c);
+  save();
 }
 function finishShift(): void {
   if (!tree?.draft) return;
@@ -165,7 +189,8 @@ function finishShift(): void {
   closeTree();
   if (!wasBroken && bonuses(st.meta).compassBroken) openEnding(); // Break the Compass was just bought
 }
-function openEnding(): void { screen = 'ending'; endingT = 0; }
+function openEnding(): void { screen = 'ending'; endingT = 0; sound('ending'); }
+function startShiftAnim(): void { screen = 'shift'; shiftAnim = 0; sound('shiftStart'); }
 
 if (debug.open === 'shift' && canShift(st)) openTree('shift');
 else if (debug.open === 'browse') openTree('browse');
@@ -179,6 +204,7 @@ function tryBuy(row: number, bulk: boolean): void {
   if (!r || r.locked) return;
   const bought = bulk && bonuses(st.meta).bulkBuy ? buyMax(st, r.def) > 0 : buy(st, r.def);
   if (bought) fx.flash[r.def.id] = 0.3;
+  sound(!bought ? 'buyFail' : isMaxed(st, r.def) ? 'buyMax' : 'buy');
 }
 function pressPrestigeButton(): void {
   const action = prestigeButtonAction(st);
@@ -187,9 +213,9 @@ function pressPrestigeButton(): void {
 function treeAction(action: 'back' | 'confirm' | 'undo' | 'reset' | 'notYet'): void {
   if (!tree) return;
   if (action === 'back' || action === 'notYet') closeTree();
-  else if (action === 'confirm') screen = 'confirm';
-  else if (action === 'reset') { if (tree.draft) resetDraft(tree.draft); } // free respec; UNDO brings the saved tree back
-  else tree.draft = startDraft(st);
+  else if (action === 'confirm') { screen = 'confirm'; click(); }
+  else if (action === 'reset') { if (tree.draft) sound(resetDraft(tree.draft) > 0 ? 'treeReset' : 'buyFail'); } // free respec; UNDO brings the saved tree back
+  else { tree.draft = startDraft(st); sound('nodeRefund'); }
 }
 function menuPointer(p: Vec): boolean {
   switch (screen) {
@@ -252,29 +278,29 @@ setupInput(canvas, {
     if (screen === 'title') {
       const b = titleButtons(hasRun).find(r => inRect(p, r.rect));
       if (b?.action === 'continue') play(false);
-      else if (b?.action === 'new') { if (hasRun) screen = 'newgame'; else play(true); }
+      else if (b?.action === 'new') { if (hasRun) { screen = 'newgame'; click(); } else play(true); }
       else if (b?.action === 'settings') openSettings('title');
     } else if (screen === 'newgame') {
       if (inRect(p, NEWGAME_ERASE)) play(true);
-      else if (inRect(p, NEWGAME_CANCEL)) screen = 'title';
+      else if (inRect(p, NEWGAME_CANCEL)) { screen = 'title'; click(); }
     } else if (screen === 'pause') {
       const b = PAUSE_BUTTONS.find(r => inRect(p, r.rect));
-      if (b?.action === 'resume') screen = 'run';
+      if (b?.action === 'resume') resume();
       else if (b?.action === 'stats') openStats('pause');
       else if (b?.action === 'settings') openSettings('pause');
       else if (b?.action === 'menu') backToMenu();
     } else if (screen === 'settings') {
-      if (dragSlider) { dragSlider = null; saveSettings(settings, localStorage); return; }
+      if (dragSlider) { dragSlider = null; saveSettings(settings, localStorage); click(); return; } // a click at the new volume
       if (inRect(p, SETTINGS_BACK)) { closeSettings(); return; }
       const t = TOGGLES.find(r => inRect(p, r.hit));
-      if (t?.id === 'screenShake') { settings.screenShake = fx.shakeOn = !settings.screenShake; saveSettings(settings, localStorage); }
-      else if (t?.id === 'fullscreen') toggleFullscreen();
+      if (t?.id === 'screenShake') { settings.screenShake = fx.shakeOn = !settings.screenShake; saveSettings(settings, localStorage); click(); }
+      else if (t?.id === 'fullscreen') { toggleFullscreen(); click(); }
     } else if (screen === 'stats') {
       if (!inRect(p, STATS_BOX)) closeStats(); // a click outside the panel closes it
     } else if (screen === 'ending') {
-      if (endingT > 1.6 && inRect(p, ENDING_BUTTON)) screen = 'run';
+      if (endingT > 1.6 && inRect(p, ENDING_BUTTON)) resume();
     } else if (screen === 'run') {
-      if (inRect(p, GEAR_BUTTON)) { screen = 'pause'; return; }
+      if (inRect(p, GEAR_BUTTON)) { openPause(); return; }
       if (inRect(p, PRESTIGE_BUTTON)) { pressPrestigeButton(); return; }
       if (inRect(p, MAGNETRON_BUTTON)) { openMagnetron(); return; }
       if (inRect(p, AUTO_SHIFT_BUTTON) && autoShiftVisible(st)) { cycleAutoShift(); return; }
@@ -287,15 +313,17 @@ setupInput(canvas, {
       const btn = treeButtons(tree).find(b => inRect(p, b.rect));
       if (btn) { treeAction(btn.action); return; }
       const n = nodeAt(st, tree, p);
-      if (n && tree.mode === 'shift' && tree.draft && buyNode(tree.draft, n)) tree.flashes.push({ id: n.id, life: 0.5 });
+      if (n && tree.mode === 'shift' && tree.draft) {
+        if (buyNode(tree.draft, n)) { tree.flashes.push({ id: n.id, life: 0.5 }); sfx.play(nodeCue(n.stage)); } else sound('buyFail');
+      }
     } else if (screen === 'gacha' && magnetron) {
-      if (magnetron.results) { magnetron.results = null; return; } // dismiss the reveal
+      if (magnetron.results) { magnetron.results = null; click(); return; } // dismiss the reveal
       if (inRect(p, PULL1)) doPull(1);
       else if (inRect(p, PULL10)) doPull(10);
       else if (inRect(p, MAG_BACK)) closeMagnetron();
     } else if (screen === 'confirm') {
-      if (inRect(p, CONFIRM_OK)) { screen = 'shift'; shiftAnim = 0; }
-      else if (inRect(p, CONFIRM_BACK)) screen = 'tree';
+      if (inRect(p, CONFIRM_OK)) startShiftAnim();
+      else if (inRect(p, CONFIRM_BACK)) { screen = 'tree'; click(); }
     }
   },
   onWheel(p, dy) { if (screen === 'tree' && tree) zoomAt(tree, p, dy < 0 ? 1.1 : 1 / 1.1); },
@@ -303,7 +331,7 @@ setupInput(canvas, {
     if (screen === 'run') pulse();
     else if (screen === 'tree' && tree?.mode === 'shift' && tree.draft) { // refund one level of the node under the cursor
       const n = nodeAt(st, tree, p);
-      if (n && refundNode(tree.draft, n)) tree.flashes.push({ id: n.id, life: 0.5 });
+      if (n && refundNode(tree.draft, n)) { tree.flashes.push({ id: n.id, life: 0.5 }); sound('nodeRefund'); }
     }
   },
   onKey(code, shift) {
@@ -312,9 +340,9 @@ setupInput(canvas, {
       if (code === 'Enter') play(!hasRun);
       return false;
     }
-    if (screen === 'newgame') { if (code === 'Escape') screen = 'title'; return false; }
+    if (screen === 'newgame') { if (code === 'Escape') { screen = 'title'; click(); } return false; }
     if (screen === 'pause') {
-      if (code === 'Escape') screen = 'run';
+      if (code === 'Escape') resume();
       else if (code === 'Tab') { openStats('pause'); return true; }
       return false;
     }
@@ -323,9 +351,9 @@ setupInput(canvas, {
       return code === 'Tab';
     }
     if (screen === 'settings') { if (code === 'Escape') closeSettings(); return false; }
-    if (screen === 'ending') { if (endingT > 1.6 && (code === 'Enter' || code === 'Escape')) screen = 'run'; return false; }
+    if (screen === 'ending') { if (endingT > 1.6 && (code === 'Enter' || code === 'Escape')) resume(); return false; }
     if (screen === 'run') {
-      if (code === 'Escape') { screen = 'pause'; return true; }
+      if (code === 'Escape') { openPause(); return true; }
       if (code === 'Tab') { openStats('run'); return true; }
       if (code === 'Space') { pulse(); return true; }
       if (code === 'KeyT' && treeUnlocked(st)) openTree('browse');
@@ -337,16 +365,17 @@ setupInput(canvas, {
       if (row >= 0) tryBuy(row, shift);
       return false;
     }
-    if (screen === 'gacha' && magnetron && (code === 'Escape' || code === 'KeyG')) { if (magnetron.results) magnetron.results = null; else closeMagnetron(); }
+    if (screen === 'gacha' && magnetron && (code === 'Escape' || code === 'KeyG')) { if (magnetron.results) { magnetron.results = null; click(); } else closeMagnetron(); }
     else if (screen === 'tree' && tree && (code === 'Escape' || (code === 'KeyT' && tree.mode === 'browse'))) closeTree();
-    else if (screen === 'confirm' && code === 'Escape') screen = 'tree';
-    else if (screen === 'confirm' && code === 'Enter') { screen = 'shift'; shiftAnim = 0; }
+    else if (screen === 'confirm' && code === 'Escape') { screen = 'tree'; click(); }
+    else if (screen === 'confirm' && code === 'Enter') startShiftAnim();
     return code === 'Space';
   },
 });
 
 function pulse(): void {
   if (!triggerPulse(st)) return;
+  sound('pulse');
   const m = magnet();
   if (m) fx.pulseShock(m, getStats(st).range);
 }

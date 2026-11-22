@@ -46,15 +46,18 @@ function makeCoin(st: GameState, x: number, y: number, angle: number, tier: Coin
 }
 
 /** Regular spawn: may roll an anti-coin, which is first queued as a warning marker. */
-function spawnRegular(st: GameState, S: Stats, b: Bonuses): void {
+function spawnRegular(st: GameState, S: Stats, b: Bonuses, out: GameEvent[]): void {
   const x = BOARD.x + BOARD.w * (SPAWN_AREA.min + rand(st) * SPAWN_AREA.size);
   const y = BOARD.y + BOARD.h * (SPAWN_AREA.min + rand(st) * SPAWN_AREA.size);
   const angle = rand(st) * Math.PI * 2;
   if (antiUnlocked(st) && rand(st) < ANTI.chance) {
     st.warnings.push({ x, y, angle, t: ANTI.warn });
+    out.push({ type: 'warning' });
     return;
   }
-  st.coins.push(makeCoin(st, x, y, angle, roll(st, S, b)));
+  const tier = roll(st, S, b);
+  st.coins.push(makeCoin(st, x, y, angle, tier));
+  out.push({ type: 'spawn', tier: tier.id });
 }
 
 function gainCrystal(st: GameState, x: number, y: number, out: GameEvent[], amount = 1): void {
@@ -94,7 +97,7 @@ function updateUnlocks(st: GameState, out: GameEvent[]): void {
   }
 }
 
-function spawnMeteorShower(st: GameState, S: Stats, b: Bonuses): void {
+function spawnMeteorShower(st: GameState, S: Stats, b: Bonuses, out: GameEvent[]): void {
   // a line of fast coins enters from one side and crosses the board
   const side = Math.floor(rand(st) * 4), n = METEOR.count;
   for (let k = 0; k < n; k++) {
@@ -104,9 +107,10 @@ function spawnMeteorShower(st: GameState, S: Stats, b: Bonuses): void {
       side === 1 ? [BOARD.x + BOARD.w - 14, BOARD.y + BOARD.h * f, Math.PI + jitter] :
       side === 2 ? [BOARD.x + BOARD.w * f, BOARD.y + 14, Math.PI / 2 + jitter] :
                    [BOARD.x + BOARD.w * f, BOARD.y + BOARD.h - 14, -Math.PI / 2 + jitter];
-    const c = makeCoin(st, x, y, angle, roll(st, S, b));
+    const tier = roll(st, S, b), c = makeCoin(st, x, y, angle, tier);
     c.speed *= METEOR.speed;
     st.coins.push(c);
+    out.push({ type: 'spawn', tier: tier.id });
   }
 }
 
@@ -127,11 +131,12 @@ function updateEvents(st: GameState, S: Stats, b: Bonuses, dt: number, out: Game
     for (let k = 0; k < n; k++) { // ignores capacity; Golden Fountain makes them all Gold
       const tier = b.goldenFountain ? GOLD : roll(st, S, b);
       st.coins.push(makeCoin(st, x, y, a0 + (k * Math.PI * 2) / n, tier));
+      out.push({ type: 'spawn', tier: tier.id });
     }
     st.event = { type: 'fountain', t: EVENTS.fountain.banner, total: EVENTS.fountain.banner };
     out.push({ type: 'fountain', x, y });
   } else {
-    spawnMeteorShower(st, S, b);
+    spawnMeteorShower(st, S, b, out);
     st.event = { type: 'meteor', t: METEOR.banner, total: METEOR.banner };
     out.push({ type: 'meteor' });
   }
@@ -262,7 +267,7 @@ export function step(st: GameState, dt: number, magnet: Vec | null, out: GameEve
 
   if (st.spawnT <= 0 && st.coins.length < S.capacity) {
     st.spawnT = 1 / S.spawn;
-    spawnRegular(st, S, b);
+    spawnRegular(st, S, b, out);
   }
   for (let i = st.warnings.length - 1; i >= 0; i--) {
     const w = st.warnings[i]!;

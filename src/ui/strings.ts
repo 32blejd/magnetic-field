@@ -287,7 +287,7 @@ export const MENU = {
 
   settingsTitle: 'SETTINGS',
   sound: 'SOUND',
-  soundSoon: 'coming soon – sliders are saved already',
+  soundSoon: 'music coming later – its slider is saved already',
   volume: { master: 'MASTER VOLUME', music: 'MUSIC', effects: 'EFFECTS' },
   display: 'DISPLAY',
   screenShake: 'SCREEN SHAKE',

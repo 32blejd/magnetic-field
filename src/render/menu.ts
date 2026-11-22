@@ -150,16 +150,16 @@ export function drawPause(ctx: Ctx, cursor: Vec | null): void {
   text(ctx, MENU.pauseFoot, cx, M.y + M.h - 28, { size: 10, color: COLORS.sub, align: 'center' });
 }
 
-function slider(ctx: Ctx, label: string, y: number, track: Rect, value: number, hover: boolean): void {
-  const placeholder = 'rgba(230,251,255,.45)'; // no sound yet: sliders are dimmed but work
-  text(ctx, label, SETTINGS_LABEL_X, y, { size: 12, weight: 700, color: placeholder });
+function slider(ctx: Ctx, label: string, y: number, track: Rect, value: number, hover: boolean, placeholder: boolean): void {
+  // music doesn't exist yet: its slider is dimmed but works and is saved
+  text(ctx, label, SETTINGS_LABEL_X, y, { size: 12, weight: 700, color: placeholder ? 'rgba(230,251,255,.45)' : hover ? COLORS.cyan : COLORS.text });
   ctx.fillStyle = 'rgba(95,155,179,.25)'; ctx.beginPath(); ctx.roundRect(track.x, track.y, track.w, track.h, 3); ctx.fill();
-  ctx.globalAlpha = hover ? 0.75 : 0.45;
+  ctx.globalAlpha = placeholder ? (hover ? 0.75 : 0.45) : 1;
   glow(ctx, COLORS.cyan, 8); ctx.fillStyle = COLORS.cyan;
   ctx.beginPath(); ctx.roundRect(track.x, track.y, track.w * value, track.h, 3); ctx.fill();
   ctx.beginPath(); ctx.arc(track.x + track.w * value, y, 7, 0, Math.PI * 2); ctx.fill(); noGlow(ctx);
   ctx.globalAlpha = 1;
-  text(ctx, `${Math.round(value * 100)}%`, track.x + track.w + 16, y, { size: 12, color: COLORS.sub });
+  text(ctx, `${Math.round(value * 100)}%`, track.x + track.w + 16, y, { size: 12, color: placeholder ? COLORS.sub : COLORS.text });
 }
 
 function toggle(ctx: Ctx, label: string, y: number, knob: Rect, on: boolean, note: string, hover: boolean): void {
@@ -183,7 +183,7 @@ export function drawSettings(ctx: Ctx, s: Settings, fullscreen: boolean, cursor:
   text(ctx, MENU.soundSoon, x + 70, M.y + 80, { size: 10, color: COLORS.sub });
   for (const { id, y, track } of SLIDERS) {
     const hover = dragging === id || (dragging === null && hov(cursor, sliderHit(track)));
-    slider(ctx, MENU.volume[id], y, track, s[id], hover);
+    slider(ctx, MENU.volume[id], y, track, s[id], hover, id === 'music');
   }
   text(ctx, MENU.display, x, M.y + 226, { size: 11, weight: 700, color: COLORS.magenta });
   for (const { id, y, knob, hit } of TOGGLES) {

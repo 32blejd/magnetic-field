@@ -87,8 +87,20 @@ The target feeling: every upgrade is **visible on screen** (bigger field, more c
   - **This run**: run time, earned / goal, income now, catch rate, coins caught (basic / Gold / Prism / Void), missed, best combo, anti-coin hits, events.
   - **Mini-goals**: all 12 goals by category – ✓ done, ▸ current with a progress bar, later ones greyed, reward in seconds of perfect income (incl. Bulk Order / Nickel bonuses); `N of 12 done`.
   - **Lifetime** (`meta.life`, save v6, kept across shifts): play time, coins earned, coins caught by tier, best combo ever, Polarity Shifts, fastest run to goal, Cores earned, mini-goals done, Lodestone pulls, anti-coins dodged (vanished or pushed off without touching the magnet). Saves older than v6 start these at zero.
-- **Settings** (from the title or the pause menu, `Esc` = back): master / music / effects volume sliders (placeholders until there is sound, but saved), Screen shake toggle (anti-coin hits), Fullscreen toggle (also `F11`; follows the browser state, not saved). Stored apart from the game save under `magnetic-field-settings` (no version; unknown or wrong fields fall back to defaults).
+- **Settings** (from the title or the pause menu, `Esc` = back): master / effects volume sliders (live – effects play at master × effects), a music slider (placeholder until there is music, but saved), Screen shake toggle (anti-coin hits), Fullscreen toggle (also `F11`; follows the browser state, not saved). Stored apart from the game save under `magnetic-field-settings` (no version; unknown or wrong fields fall back to defaults). Releasing a volume slider plays a click at the new level.
 - Any debug URL param skips the title screen and starts the run directly.
+
+### Sound
+
+All sound effects are **synthesized live with the Web Audio API** (oscillators, filtered noise, volume envelopes – no audio files), in `src/audio/`: `cues.ts` maps game events and UI actions to sounds (pure, tested), `synth.ts` holds one recipe per sound. Sound is output only, like visual effects. It starts with the first click or key press (browser autoplay rules – the title screen provides it). Music: not yet. Sound board for tuning by ear: `npm run dev`, then open `/sounds.html` (dev only, not in the build).
+
+- **Coins** – every tier has its own **pickup** (Basic blip, Gold two-note chime, Prism arpeggio, Void deep boom) and **spawn** sound (soft, quieter than pickups); pickup pitch rises with the combo, a full octave at combo 24. Anti-coins: warning beeps, short-circuit buzz on a hit, a bounty chime when Polarity pushes one off the board. Escaped coins: a very quiet thud.
+- **Panel and actions** – buy (click + rising tone), can't afford (dull click), last level (arpeggio), Auto-buyer (quiet), new upgrade / feature (jingle), Pulse (bass whoomp; Auto-pulse at half volume).
+- **Events and rewards** – Burst (riser + chord), Fountain (rising arpeggio), Meteor Shower (falling whistle), mini-goal (chime), Charge Crystal, Chain Reaction (zap), Combo Shield (clang), Interest.
+- **Core tree, shifts, Magnetron** – node purchase (bell, higher in later stages), refund / undo, reset tree, Polarity Shift (a 1 s sweep matching the flip animation, then a chord), Auto-shift, pull (whirr) and one reveal sound per card as it flips (Common → Legendary fanfare).
+- **Menus and the ending** – a short click on every menu action, a fanfare on the ending screen.
+
+Against noise late in a run (hundreds of pickups per second) each simulation step plays at most one cue per sound, every sound has a minimum gap (`MIN_GAP`, e.g. 35 ms for basic pickups, 120 ms for basic spawns), at most 48 voices play at once, and a compressor keeps overlaps from clipping.
 
 ## Hosting
 
@@ -367,7 +379,7 @@ Numbers live in `src/data/tuning.ts` (`SATELLITES`, `DRONES`, `CHAIN`, `INTEREST
 | **M3** | Events, Pulse, anti-coins, run stats, mini-goals | the main loop has variety and rewards skill | ✅ |
 | **M4** | Polarity Shift: Cores, Core tree screen (browse from 100k, spend on shift, confirm), simple nodes (stat bonuses) | there's a reason to start over | ✅ |
 | **M5** | Lodestones / Magnetron ✅ · keystones and mechanics from the tree: Satellites, Void Coin, Chain Reaction, Interest, auto-buyer, Auto-pulse, Auto-shift, Drones ✅ | the game partly plays itself | ✅ (look chosen from [mockups/m5-visuals.html](mockups/m5-visuals.html): variant B) |
-| **M6** | Polish: title screen, pause menu and settings ✅ · sounds, more particles, save export UI | the game *feels* good | |
+| **M6** | Polish: title screen, pause menu and settings ✅ · Stats screen ✅ · sound effects ✅ · music, more particles, save export UI | the game *feels* good | |
 | **M7** | Break the Compass: stages 2–3 (32 nodes), Break the Compass (+50 upgrade levels), ending screen, endless ✅ | the game has an ending (~3 h) | ✅ (best-time records in endless still open) |
 
 **MVP = M0–M2.** Collecting coins has to be fun on its own before we add more systems. M0–M3 were built by porting a single-file JS prototype to TypeScript (`src/`). The prototype was then removed so the numbers live in one place; it's still in the git history (first commit, `docs/mockups/`).

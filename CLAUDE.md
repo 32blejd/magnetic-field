@@ -23,6 +23,8 @@ npm run sim -- [cursorSpeed=400] [runs=3] [shifts=0]   # balance simulator (bot 
 npm run sim:m5 -- [shifts=9] [seeds=3]       # impact of each M5 node on a late run + idle income with Drones
 ```
 
+Sound board (every sound effect, to tune by ear): `npm run dev`, then open `/sounds.html` (dev only, not built).
+
 `npm test` goes through `scripts/vitest.mjs`, which upper-cases the drive letter of the working directory first. On Windows a `c:\…` cwd (e.g. a VS Code terminal) makes Vitest load itself twice and every test fails with "Cannot read properties of undefined (reading 'config')". Don't call `vitest` directly.
 
 Debug URL params (dev or preview): `?nosave=1`, `?reset=1`, `?earned=N`, `?cores=N`, `?shifts=N`, `?crystals=N`, `?pulls=N`, `?open=shift|browse|gacha|ending|stats`, `?warm=N`, `?speed=N`, `?rare=1`, `?anti=1`, `?nodes=Nkey:3,Wb2|stage1..3|all` – see `src/debug.ts`. Any of them skips the title screen (without params the game opens on the title screen).
@@ -35,6 +37,7 @@ src/
   game/      # state, simulation step, derived stats, money, abilities, goals – pure logic
   save/      # save/load, versioning, migrations; settings.ts (player settings, own key)
   render/    # canvas drawing (board, HUD, panel, prestige bar, menus) and visual-only effects
+  audio/     # sound effects: cues.ts (events → sounds, pure) and synth.ts (Web Audio recipes); soundboard.ts for sounds.html
   ui/        # layout rects, input, number formatting, all UI strings
   debug.ts   # debug URL params
   main.ts    # wires everything together, game loop
@@ -47,11 +50,11 @@ docs/        # DESIGN.md – game design, numbers, balance tables; docs/mockups/
 
 - **Logic does not depend on rendering.** `game/` and `data/` import nothing from `render/` or `ui/`. The simulation runs in tests and in the bot without a browser.
 - **Fixed simulation step.** `step(state, STEP, magnet, events)` runs at 1/60 s with an accumulator; rendering via `requestAnimationFrame` only draws. Never tie logic to frame rate.
-- **Events out, not callbacks.** `step` pushes `GameEvent`s (pickup, miss, unlock, goal…); `render/effects.ts` turns them into particles, banners etc. Visual-only state never feeds back into the game.
+- **Events out, not callbacks.** `step` pushes `GameEvent`s (pickup, miss, unlock, goal…); `render/effects.ts` turns them into particles, banners etc., `audio/cues.ts` into sounds. Visual and audio state never feeds back into the game.
 - **Single source of truth.** `GameState` holds primary data; magnet parameters are derived by `getStats(state)` – never store them.
 - **Data-driven upgrades.** A new upgrade = an entry in `src/data/upgrades.ts` + its text in `ui/strings.ts` + its format in `ui/format.ts`. Effects are written in terms of `level / max` so caps can change without changing the value at max.
 - **Upgrade cost:** `round(base × growth^level × steepExtra)` in `game/money.ts`, covered by tests.
-- **Deterministic RNG.** All game randomness goes through `rand(state)` (state-held seed). `Math.random` is only allowed for visual effects and for picking the seed of a new run (`main.ts`).
+- **Deterministic RNG.** All game randomness goes through `rand(state)` (state-held seed). `Math.random` is only allowed for visual and audio effects and for picking the seed of a new run (`main.ts`).
 - **Transient objects** (coins, warnings, drones, timers, effects) are not saved.
 
 ## Saving

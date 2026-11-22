@@ -145,4 +145,8 @@ export type GameEvent =
   | { type: 'chain'; x: number; y: number; radius: number }
   | { type: 'interest'; amount: number }
   | { type: 'autobuy'; id: UpgradeId }
-  | { type: 'autopulse'; x: number; y: number; range: number };
+  | { type: 'autopulse'; x: number; y: number; range: number }
+  /** A coin appeared on the board (regular spawn, Fountain, Meteor Shower). */
+  | { type: 'spawn'; tier: TierId }
+  /** An anti-coin warning marker appeared. */
+  | { type: 'warning' };
