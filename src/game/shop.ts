@@ -4,10 +4,18 @@ import { canAfford, costOf, discounted, spend } from './money';
 import { bonuses } from './prestige';
 import type { GameState } from './types';
 
-export const nextCost = (st: GameState, def: UpgradeDef): number =>
-  discounted(costOf(def, st.levels[def.id]), bonuses(st.meta).costMult);
+/** Market Day (SE): upgrades cost half during a Burst event. */
+const MARKET_DAY = 0.5;
 
-export const isMaxed = (st: GameState, def: UpgradeDef): boolean => st.levels[def.id] >= def.max;
+export function nextCost(st: GameState, def: UpgradeDef): number {
+  const b = bonuses(st.meta);
+  return discounted(costOf(def, st.levels[def.id]), b.costMult * (b.marketDay && st.event?.type === 'burst' ? MARKET_DAY : 1));
+}
+
+/** Highest level an upgrade can reach: its cap, +50 after Break the Compass. */
+export const levelCap = (st: GameState, def: UpgradeDef): number => def.max + bonuses(st.meta).extraLevels;
+
+export const isMaxed = (st: GameState, def: UpgradeDef): boolean => st.levels[def.id] >= levelCap(st, def);
 
 export function canBuy(st: GameState, def: UpgradeDef): boolean {
   return st.unlocked[def.id] && !isMaxed(st, def) && canAfford(st, nextCost(st, def));

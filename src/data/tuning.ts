@@ -73,6 +73,9 @@ export const DRONES = {
   radius: 7,
 };
 
+/** Twin Magnet (NW keystone): a second magnet mirrored through the board centre; field radius × the main field without Pulse. */
+export const TWIN = { range: 0.8 };
+
 /** Chain Reaction (E): catching a Prism also collects every coin within this radius of it. */
 export const CHAIN = { radius: 80 };
 

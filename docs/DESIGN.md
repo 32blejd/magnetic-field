@@ -193,6 +193,21 @@ The greedy bot buys the cheapest nodes first, so it reaches M5 nodes very late (
 
 In active play the keystones are a modest boost; their big effect is idle play – 3 Drones earn ~84% of an active player's income (see Open questions).
 
+**Whole game** (bot, total play time from a new game to buying Break the Compass; average of 6 seeds per speed, range in brackets; time spent in the tree and Magnetron screens not counted – a human playing for the first time is probably 20–30% slower). **Target: ~3 h for the average bot.**
+
+| Milestone | Run | Slow (250) | Average (400) | Fast (600) |
+|---|---|---|---|---|
+| First shift (1M) | 1 | 15 min | 13 min | 11.5 min |
+| Stage 1 maxed (246 ◆) → broken compass opens | 22 | 1:37 | 1:28 | 1:22 |
+| Stage 2 maxed (+254 ◆) → full rose opens | 40 | 2:10 | 2:00 | 1:55 |
+| Stage 3 maxed (+400 ◆) → Break the Compass appears | 69 | 3:00 | 2:49 | 2:43 |
+| **Break the Compass bought (100 ◆) – the ending** | 76 | **3:10** (2:58–3:40) | **2:59** (2:47–3:12) | **2:53** (2:41–3:02) |
+| Every Lodestone at Lv 3 | 31–61 | ~2:20 | ~2:04 (1:40–2:17) | ~2:00 |
+
+Run lengths of the average bot by stage: stage 1 – 22 runs, 13:17 → 0:41 (avg 3:48) · stage 2 – 18 runs, 5:05 → 0:36 (avg 1:53) · stage 3 – 29 runs, 3:29 → 0:58 (avg 1:41) · stage 4 (saving 100 ◆) – 7 runs, ~1:40 · endless – ~1:35 per run, stable. Every new stage multiplies the run goal (see Prestige), so runs get long again when a stage opens and shrink as its nodes are bought – without it, runs in stages 2–3 dropped to 2–11 seconds.
+
+Cursor speed (skill) matters early – ~15 min between slow and fast at the end of stage 1 – but less later: automation and capped upgrades do most of the work, so the gap at the ending is ~17 min. Crystals come mostly per run (+3 per shift, +1 per mini-goal), so the Lodestone collection depends more on gacha luck than on skill.
+
 Run: `npm run sim -- [cursorSpeed] [runs] [shifts]`. Quick tuning without editing files: `OV='{"value":{"growth":1.5}}' npm run sim`. `npm test` includes a guard that the average bot reaches 1M in the first run in 12–16 min.
 
 ### Lodestones – the Magnetron (gacha)
@@ -201,6 +216,7 @@ Opens after the first Polarity Shift: `◈ N [G]` button in the panel header (or
 
 - **Charge Crystals**: +1 per mini-goal, +1 per event, +3 per shift, Prism pickups drop one 5% of the time (+ Neodymium bonus). Earned from the start; visible once the Magnetron opens.
 - **Pull** = 10 crystals (×1 or ×10). Odds: Common 45% · Rare 32% · Epic 17% · Legendary 6%. **Pity**: Epic or better guaranteed on the 20th pull without one.
+- **Legendary pity**: once every Common, Rare and Epic stone is at Lv 3, every pull is a Legendary that isn't maxed yet (at most 12 pulls to finish the collection). The Magnetron shows `All lower stones maxed: every pull is a Legendary`, and `Collection complete · pulls refund 3 ◈` when everything is maxed. Before this rule the last Legendary levels were a long grind of 3-crystal refunds (100% took ~2.5–3.5 h, 175–270 runs).
 - **16 stones** = 4 elements × 4 rarities (Shard / Ingot / Heart / Crown). Duplicates level a stone up to **Lv 3**; duplicates of a maxed stone refund 3 crystals.
 
 | Rarity | Coin value / level | Extra / level (Epic; Legendary ×2) |
@@ -210,18 +226,66 @@ Opens after the first Polarity Shift: `◈ N [G]` button in the panel header (or
 | Epic | +3% | Iron: +2% range · Cobalt: +0.2% Gold & Prism chance · Nickel: +5% mini-goal rewards · Neodymium: +1% crystal chance |
 | Legendary | +5% | double the Epic extra |
 
-- **Set bonus**: owning all four stones of an element (any level): +5% coin value. Everything maxed (Lv 3) ≈ +150% coin value. Rough full-collection estimate: ~170–220 pulls ≈ 60–75 shifts ≈ 8–10 h.
+- **Set bonus**: owning all four stones of an element (any level): +5% coin value. Everything maxed (Lv 3) ≈ +150% coin value. Full collection: see *Whole game* above (~2 h of play, before the ending).
 - Screen: machine + pity counter on the left, 4×4 collection on the right (hover for effects), card-flip reveal after a pull. The run is paused while it's open.
 
-### Endgame – "Break the Compass" (plan, mockup: [mockups/compass-rose.html](mockups/compass-rose.html))
+### Endgame – "Break the Compass" (look: [mockups/compass-rose.html](mockups/compass-rose.html)) ✅
 
-1. **Stage 1 – compass** (now): 4 branches.
-2. **Stage 2 – broken compass**: after all four keystones the compass cracks. Second prestige layer resets Cores and the tree for **Shards**; Lodestones are kept. Intercardinal branches mix two neighbours – NE Hunter (active + coins), SE Merchant (coins + economy), SW Foundry (economy + automation), NW Machine (automation + active). New mechanic **Polarity**: right click flips the magnet between attract and repel.
-3. **Stage 3 – full 16-point rose**: 8 thin mastery spokes (NNE, ENE, …), one strong node each. Lighting up the whole rose reaches **TRUE NORTH** – the ending (final stats, credits), then an endless mode with a growing goal and best-time records.
+The Core tree grows from a 4-point compass into an 8- and a 16-point rose, all in the **same tree, bought with Cores** (no second prestige layer). A stage opens once **every node of the previous stage is maxed**; its nodes appear in the tree (`STAGE n/4 · …` above the legend, background letters for the new directions) and the **run goal jumps** (see Prestige). Data: `STAGE_NODES`, `BREAK_COMPASS` in `src/data/prestige.ts`; logic in `src/game/prestige.ts`.
+
+1. **Stage 1 – the compass**: N / E / S / W, 28 nodes, 246 ◆ (table below).
+2. **Stage 2 – the broken compass**: four hybrid branches between the cardinals, each `b1 → b2/b3 → keystone` from the Polarity Core, 16 nodes, 254 ◆.
+3. **Stage 3 – the full rose**: eight mastery spokes, each `b1 → mastery node`; a spoke's b1 grows from the keystones of its two neighbours (NNE from N and NE…). 16 nodes, 400 ◆.
+4. **Break the Compass** – the last upgrade, a gold star above N, **100 ◆**: every upgrade can go **50 levels past its cap**, coin value ×3, +2 Drones, +2 Satellites. Buying it (after the shift confirm) shows the **ending**: a star bursting out of the rose, `THE COMPASS IS BROKEN`, **`THANK YOU FOR PLAYING`**, shifts / Cores earned / Lodestones, a credits line, then `PLAY ON · ENDLESS` (`Enter`).
+5. **Endless**: the game goes on – the prestige bar says `POLARITY SHIFT · ENDLESS`, the goal keeps growing with every shift (×300 multiplier, ~1:35 runs that stay stable), the tree is complete and locked (no refunds or reset). Best-time records are not done yet.
+
+Whole tree: **1,000 ◆** (246 + 254 + 400 + 100).
+
+**Levels above the cap** (Break the Compass): each extra level adds a fixed `over` amount to the effect (Value +40 per coin, Range +2 px, Spawn +0.25/s, Strength +0.3×, Capacity +2, Rarity +0.2%, Coin speed +0.1 s) and costs ×1.15 the previous level (`OVERCAP_GROWTH`, `effectAt()` in `src/data/upgrades.ts`, `costOf()` in `src/game/money.ts`). Levels above the cap are kept in the save only while the compass is broken.
+
+**Stage 2 – the broken compass** (hybrid colors are the blend of their two neighbours):
+
+| Node | Effect | Levels | Cost (◆ per level) |
+|---|---|---|---|
+| **NE · Hunter** (active + coins) | | | |
+| Predator | Gold, Prism and Void coins are pulled +15% faster / lv | 3 | 5 · 7 · 9 |
+| Golden Streak | while the combo is at its max, Gold chance +3% / lv | 2 | 8 · 10 |
+| Trophy | Gold coins worth ×2.5 / ×3 instead of ×2 | 2 | 8 · 10 |
+| Polarity (keystone) | the field pushes anti-coins away; an anti-coin pushed off the board pays like a Prism | 1 | 16 |
+| **SE · Merchant** (coins + economy) | | | |
+| Bulk Order | mini-goal rewards +50% / lv | 3 | 5 · 7 · 9 |
+| Market Day | upgrades cost half during Burst events | 1 | 10 |
+| Insurance | escaped coins still pay 10% of their value / lv | 2 | 8 · 10 |
+| Mint (keystone) | every caught Gold coin splits off two basic coins | 1 | 16 |
+| **SW · Foundry** (economy + automation) | | | |
+| Assembly Line | Satellite, Drone and Twin Magnet fields +15% / lv | 3 | 5 · 7 · 9 |
+| Overtime | Interest pays every 5 s instead of 10 s | 1 | 10 |
+| Smelter | Auto-buyer twice as fast (8 levels/s) | 1 | 10 |
+| Second Shift (keystone) | +1 Drone, Drones fly 40% faster | 1 | 16 |
+| **NW · Machine** (automation + active) | | | |
+| Overclock | Pulse cooldown −20% / lv | 2 | 6 · 9 |
+| Drone Link | while Pulse is active, helper fields grow with it | 1 | 10 |
+| Long Pulse | Pulse lasts +0.5 s / lv | 2 | 8 · 10 |
+| Twin Magnet (keystone) | a second magnet mirrored through the board centre (80% field, ignores anti-coins; violet ring) | 1 | 16 |
+
+**Stage 3 – the full rose** (b1 → mastery node):
+
+| Spoke | b1 (levels · cost) | Mastery node (22 ◆) |
+|---|---|---|
+| NNE (N + NE) | Wide Field: +5% range / lv (3 · 8/10/12) | Perfect Field: field +50% while the combo is at its max |
+| ENE (NE + E) | Fortune: +0.5% Gold and Prism chance / lv (3 · 8/10/12) | Jackpot: 1% of pickups pay ×25 |
+| ESE (E + SE) | Gilding: +1% Gold chance / lv (3 · 8/10/12) | Golden Age: +10% Gold chance |
+| SSE (SE + S) | Dividend II: +10% coin value / lv (3 · 8/10/12) | Compound II: Compound +2% per minute, up to +100% |
+| SSW (S + SW) | Discount II: upgrades −5% / lv (3 · 8/10/12) | Blueprint: every run starts with all upgrades unlocked at Lv 5 |
+| WSW (SW + W) | Afterburner: Drones +15% speed / lv (3 · 8/10/12) | Swarm: +2 Drones |
+| WNW (W + NW) | Shockwave: Pulse range +0.5× / lv (2 · 10/12) | Orbit: +2 Satellites |
+| NNW (NW + N) | Hot Streak II: combo window +0.3 s / lv (2 · 10/12) | Combo Limit II: max combo ×3 |
+
+Changed from the first plan: no Shards layer (Cores all the way); the right-click attract/repel flip became the passive Polarity keystone (right click is already Pulse, and anti-coins were nearly harmless); the Collector turret and the Hunting Season bounty coin were replaced by Second Shift and Mint (simpler, no new controls); the central TRUE NORTH node and a separate "The End" upgrade were merged into Break the Compass.
 
 ### Prestige – "Polarity Shift" (UI mockup: [mockups/polarity-shift.html](mockups/polarity-shift.html))
 
-Requirement: **earn the run goal = 1M × (1 + 1.5 × shifts)** – 1M, 2.5M, 4M, 5.5M, … Reward: **Cores** = `floor(10 × √(earned this run ÷ goal))` – about 10 at the goal of any run, 14 at 2× the goal, 20 at 4×, so playing on pays off with diminishing returns (e.g. a planned longer grind for extra Cores).
+Requirement: **earn the run goal = 1M × (1 + 1.5 × shifts) × stage multiplier** – 1M, 2.5M, 4M, 5.5M, … in stage 1. The multiplier is ×1 / ×3.5 / ×7.5 / ×10 while stage 1 / 2 / 3 / 4 is the highest open stage, and ×300 in endless (`PRESTIGE.stageGoal`, `endlessGoal`); the confirm dialog shows the next goal including a stage opened by the draft. Reward: **Cores** = `floor(10 × √(earned this run ÷ goal))` – about 10 at the goal of any run, 14 at 2× the goal, 20 at 4×, so playing on pays off with diminishing returns (e.g. a planned longer grind for extra Cores).
 
 **Flow**
 
@@ -236,7 +300,7 @@ The run is paused while the tree or the confirm dialog is open. Keys: `T` tree p
 
 **Core tree** – nodes revealed next to owned ones; drag to pan, scroll to zoom. Four branches on real compass directions (N red like a compass needle), each b1 → b2/b3 → b4/b5/b6 → keystone. Data: `src/data/prestige.ts`, effects: `src/game/prestige.ts`.
 
-Whole tree: **246 ◆** (~25 shifts at ~10 Cores each). Keystones and the priciest automation levels were cut ~35% (299 → 246) so long-term goals come sooner; the cheap starter nodes kept their costs. Cheapest path to a first keystone: Satellites 1 = 15 ◆, Interest 17, Void 19, Drones 1 = 20 (2 shifts).
+Stage 1: **246 ◆** (~25 shifts at ~10 Cores each; stages 2–4 below). Keystones and the priciest automation levels were cut ~35% (299 → 246) so long-term goals come sooner; the cheap starter nodes kept their costs. Cheapest path to a first keystone: Satellites 1 = 15 ◆, Interest 17, Void 19, Drones 1 = 20 (2 shifts).
 
 | Node | Effect | Levels | Cost (◆ per level) | Status |
 |---|---|---|---|---|
@@ -300,12 +364,13 @@ Numbers live in `src/data/tuning.ts` (`SATELLITES`, `DRONES`, `CHAIN`, `INTEREST
 | **M4** | Polarity Shift: Cores, Core tree screen (browse from 100k, spend on shift, confirm), simple nodes (stat bonuses) | there's a reason to start over | ✅ |
 | **M5** | Lodestones / Magnetron ✅ · keystones and mechanics from the tree: Satellites, Void Coin, Chain Reaction, Interest, auto-buyer, Auto-pulse, Auto-shift, Drones ✅ | the game partly plays itself | ✅ (look chosen from [mockups/m5-visuals.html](mockups/m5-visuals.html): variant B) |
 | **M6** | Polish: title screen, pause menu and settings ✅ · sounds, more particles, save export UI | the game *feels* good | |
+| **M7** | Break the Compass: stages 2–3 (32 nodes), Break the Compass (+50 upgrade levels), ending screen, endless ✅ | the game has an ending (~3 h) | ✅ (best-time records in endless still open) |
 
 **MVP = M0–M2.** Collecting coins has to be fun on its own before we add more systems. M0–M3 were built by porting a single-file JS prototype to TypeScript (`src/`). The prototype was then removed so the numbers live in one place; it's still in the git history (first commit, `docs/mockups/`).
 
 ## Debug URL params (testing)
 
-Work on `npm run dev` / `npm run preview`: `?nosave=1` don't load/write the save · `?reset=1` clear the save · `?warm=N` fast-forward N seconds · `?speed=N` run the game clock N× faster (1–50) · `?earned=N` start as if N coins were earned (unlocks + money) · `?rare=1` boost rare coin chances (Void too, if its keystone is owned) · `?anti=1` boost anti-coin chance to 30% (needs `earned` ≥ 25000) · `?cores=N` set unspent Cores · `?open=shift` open the Core tree to spend Cores (with `earned=1000000`) · `?open=browse` open the tree preview · `?shifts=N` set completed shifts · `?crystals=N` set Charge Crystals · `?pulls=N` pull N lodestones on load · `?open=gacha` open the Magnetron · `?nodes=Nkey:3,Wb2` own Core tree nodes (id with an optional level; `all` = every node maxed). Combine with `&`. Any of these params skips the title screen.
+Work on `npm run dev` / `npm run preview`: `?nosave=1` don't load/write the save · `?reset=1` clear the save · `?warm=N` fast-forward N seconds · `?speed=N` run the game clock N× faster (1–50) · `?earned=N` start as if N coins were earned (unlocks + money) · `?rare=1` boost rare coin chances (Void too, if its keystone is owned) · `?anti=1` boost anti-coin chance to 30% (needs `earned` ≥ 25000) · `?cores=N` set unspent Cores · `?open=shift` open the Core tree to spend Cores (with `earned=1000000`) · `?open=browse` open the tree preview · `?shifts=N` set completed shifts · `?crystals=N` set Charge Crystals · `?pulls=N` pull N lodestones on load · `?open=gacha` open the Magnetron · `?nodes=Nkey:3,Wb2` own Core tree nodes (id with an optional level; `stage1`/`stage2`/`stage3` = every node up to that stage maxed, so the next one is open; `all` = every node maxed incl. Break the Compass = endless) · `?open=ending` show the ending screen. Combine with `&`. Any of these params skips the title screen.
 
 ## Out of scope (for now)
 
@@ -321,4 +386,6 @@ Work on `npm run dev` / `npm run preview`: `?nosave=1` don't load/write the save
 - Combo stays at ×2 for most of the mid/late game for a good player – maybe raise the cap via upgrades or prestige.
 - Miss sparks at the board edge may get noisy late game (many misses per second).
 - Drones are very strong for idle play: 3 Drones + Auto-buyer earn ~84% of an active player's income with nobody at the mouse. Fine for "the game plays itself", or tune down (e.g. Drone speed 140 → 100 px/s or field 45% → 35%) so active play stays clearly better? Needs a target.
+- Endless mode: Cores have nothing left to buy after the ending – best-time records (per run? time to goal?) or another sink?
+- Credits line on the ending screen is generic – add the author's name?
 - Keystones give only 0…−8% run time in active play (Satellites 3: −4% for 30 Cores) – consider buffing them in the late-run balance pass.

@@ -1,7 +1,7 @@
 /* Magnetron screen: the machine, the Lodestone collection and the pull reveal. */
 import { ELEMENTS, GACHA, LODESTONES, RARITIES, type Element, type LodestoneDef, type Rarity } from '../data/lodestones';
 import { VIEW } from '../data/tuning';
-import { canPull, lodestoneValueBonus, pullsToPity } from '../game/lodestones';
+import { canPull, collectionComplete, legendaryPity, lodestoneValueBonus, pullsToPity } from '../game/lodestones';
 import type { GameState, Vec } from '../game/types';
 import { formatNumber } from '../ui/format';
 import { inRect, type Rect } from '../ui/layout';
@@ -65,7 +65,9 @@ function drawMachine(ctx: Ctx, st: GameState, t: number, cursor: Vec | null): vo
   ctx.fillStyle = '#fff'; ctx.font = `700 22px ${FONT}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('◈', cx, cy + 1);
   ctx.textBaseline = 'alphabetic';
 
-  ctx.fillStyle = COLORS.sub; ctx.font = `11px ${FONT}`; ctx.fillText(M.pity(pullsToPity(st)), cx, PULL1.y - 14);
+  const pityLine = collectionComplete(st) ? M.collectionDone(formatNumber(GACHA.maxedRefund))
+    : legendaryPity(st) ? M.legendaryPity : M.pity(pullsToPity(st));
+  ctx.fillStyle = legendaryPity(st) ? COLORS.amber : COLORS.sub; ctx.font = `11px ${FONT}`; ctx.fillText(pityLine, cx, PULL1.y - 14);
   ctx.textAlign = 'left';
   button(ctx, PULL1, M.pull1(formatNumber(GACHA.pullCost)), COLORS.cyan, canPull(st, 1), !!cursor && inRect(cursor, PULL1));
   button(ctx, PULL10, M.pull10(formatNumber(GACHA.pullCost * 10)), COLORS.magenta, canPull(st, 10), !!cursor && inRect(cursor, PULL10));

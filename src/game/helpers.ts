@@ -1,6 +1,6 @@
 /* Helper magnets from the Core tree keystones: Satellites (orbit the cursor) and Drones (roam the board on their own).
    They pull and collect good coins like the main magnet, but ignore anti-coins and are not affected by Pulse. */
-import { BOARD, COIN_RADIUS, DRONES, SATELLITES } from '../data/tuning';
+import { BOARD, COIN_RADIUS, DRONES, SATELLITES, TOUCH_DISTANCE, TWIN } from '../data/tuning';
 import type { Bonuses } from './prestige';
 import type { Stats } from './stats';
 import type { GameState, Vec } from './types';
@@ -36,7 +36,7 @@ function droneHome(k: number, n: number): Vec {
  * Moves the drones: each one flies toward the nearest good coin no other drone has claimed and stays put when there is none.
  * Keeps the number of drones equal to `count`.
  */
-export function updateDrones(st: GameState, count: number, dt: number): void {
+export function updateDrones(st: GameState, count: number, dt: number, speedMult = 1): void {
   if (st.drones.length > count) st.drones.length = count;
   while (st.drones.length < count) st.drones.push(droneHome(st.drones.length, count));
   const claimed = new Set<number>();
@@ -49,20 +49,31 @@ export function updateDrones(st: GameState, count: number, dt: number): void {
     });
     if (best < 0) continue;
     claimed.add(best);
-    const c = st.coins[best]!, step = Math.min(bestD, DRONES.speed * dt);
+    const c = st.coins[best]!, step = Math.min(bestD, DRONES.speed * speedMult * dt);
     if (bestD > 0) { d.x += ((c.x - d.x) / bestD) * step; d.y += ((c.y - d.y) / bestD) * step; }
     d.x = Math.min(Math.max(d.x, BOARD.x), BOARD.x + BOARD.w);
     d.y = Math.min(Math.max(d.y, BOARD.y), BOARD.y + BOARD.h);
   }
 }
 
-/** All helper magnets active right now. Satellites need the main magnet (they vanish while it's off or short-circuited). */
+/** Twin Magnet: the magnet's position mirrored through the board centre. */
+export const twinPosition = (m: Vec): Vec => ({ x: 2 * BOARD.x + BOARD.w - m.x, y: 2 * BOARD.y + BOARD.h - m.y });
+
+/**
+ * All helper magnets active right now. Satellites and the Twin Magnet need the main magnet (they vanish while it's off or
+ * short-circuited). Assembly Line scales every helper field; Drone Link lets Pulse scale them too.
+ */
 export function helperMagnets(st: GameState, magnet: Vec | null, S: Stats, b: Bonuses): HelperMagnet[] {
   const out: HelperMagnet[] = [];
+  const scale = b.helperRangeMult * (b.droneLink && st.pulseT > 0 ? b.pulseRangeMult : 1);
   for (const p of satellitePositions(st, magnet, S.baseRange, b.satellites)) {
-    out.push({ x: p.x, y: p.y, range: S.baseRange * SATELLITES.range, touch: touchOf(SATELLITES.radius) });
+    out.push({ x: p.x, y: p.y, range: S.baseRange * SATELLITES.range * scale, touch: touchOf(SATELLITES.radius) });
   }
-  for (const d of st.drones) out.push({ x: d.x, y: d.y, range: S.baseRange * DRONES.range, touch: touchOf(DRONES.radius) });
+  for (const d of st.drones) out.push({ x: d.x, y: d.y, range: S.baseRange * DRONES.range * scale, touch: touchOf(DRONES.radius) });
+  if (b.twinMagnet && magnet) {
+    const p = twinPosition(magnet);
+    out.push({ x: p.x, y: p.y, range: S.baseRange * TWIN.range * scale, touch: TOUCH_DISTANCE });
+  }
   return out;
 }
 

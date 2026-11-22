@@ -1,36 +1,46 @@
 /* Core tree screen: node positions (compass layout), camera, view state and button rects. */
-import { NODES, type Branch, type NodeDef } from '../data/prestige';
+import { NODES, type Branch, type Cardinal, type NodeDef } from '../data/prestige';
 import { VIEW } from '../data/tuning';
 import type { Draft } from '../game/prestige';
 import type { Vec } from '../game/types';
 import type { Rect } from './layout';
 
-/** Unit vectors per branch: [along the branch, sideways]. N is up, like a real compass. */
-export const AXES: Readonly<Record<Branch, [Vec, Vec]>> = {
-  N: [{ x: 0, y: -1 }, { x: 1, y: 0 }],
-  E: [{ x: 1, y: 0 }, { x: 0, y: 1 }],
-  S: [{ x: 0, y: 1 }, { x: -1, y: 0 }],
-  W: [{ x: -1, y: 0 }, { x: 0, y: -1 }],
+/** Compass index of every branch (0 = N, clockwise in 22.5° steps). */
+const DIR_INDEX: Readonly<Record<Branch, number>> = {
+  N: 0, NNE: 1, NE: 2, ENE: 3, E: 4, ESE: 5, SE: 6, SSE: 7, S: 8, SSW: 9, SW: 10, WSW: 11, W: 12, WNW: 13, NW: 14, NNW: 15,
 };
-/** [distance from the centre, sideways offset] of each slot. */
-const SLOT_POS: Record<string, [number, number]> = {
+/** Unit vectors of a branch: [along the branch, sideways]. N is up, like a real compass. */
+function axes(b: Branch): [Vec, Vec] {
+  const a = (DIR_INDEX[b] * Math.PI) / 8 - Math.PI / 2, round = (x: number) => Math.round(x * 1e9) / 1e9;
+  return [{ x: round(Math.cos(a)), y: round(Math.sin(a)) }, { x: round(-Math.sin(a)), y: round(Math.cos(a)) }];
+}
+export const AXES: Readonly<Record<Cardinal, [Vec, Vec]>> = { N: axes('N'), E: axes('E'), S: axes('S'), W: axes('W') };
+/** [distance from the centre, sideways offset] of each slot. Hybrids (stage 2) sit between the cardinal branches,
+    spokes (stage 3) past the keystones of their two neighbours, Break the Compass above N. */
+const CARDINAL_POS: Record<string, [number, number]> = {
   b1: [115, 0], b2: [205, -65], b3: [205, 65], b4: [300, -115], b5: [300, 0], b6: [300, 115], key: [415, 0],
 };
-/** The view is wide, so N/S branches are a bit shorter than E/W. */
+const HYBRID_POS: Record<string, [number, number]> = { b1: [150, 0], b2: [240, -30], b3: [240, 30], key: [335, 0] };
+const SPOKE_POS: Record<string, [number, number]> = { b1: [470, 0], key: [560, 0] };
+const FINAL_DIST = 650;
+/** The view is wide, so the vertical part of every distance is squeezed. */
 export const VERTICAL_SQUEEZE = 0.72;
 
-export function branchPoint(b: Branch, dist: number): Vec {
-  const [u] = AXES[b], s = u.y ? VERTICAL_SQUEEZE : 1;
-  return { x: u.x * dist * s, y: u.y * dist * s };
+function place(b: Branch, dist: number, side: number): Vec {
+  const [u, v] = axes(b);
+  return { x: u.x * dist + v.x * side, y: u.y * dist * VERTICAL_SQUEEZE + v.y * side };
 }
+export const branchPoint = (b: Branch, dist: number): Vec => place(b, dist, 0);
 
 const POS: Record<string, Vec> = Object.fromEntries(NODES.map(n => {
   if (n.branch === 'core') return [n.id, { x: 0, y: 0 }];
-  const [u, v] = AXES[n.branch], [d0, side] = SLOT_POS[n.slot]!, d = u.y ? d0 * VERTICAL_SQUEEZE : d0;
-  return [n.id, { x: u.x * d + v.x * side, y: u.y * d + v.y * side }];
+  if (n.branch === 'final') return [n.id, branchPoint('N', FINAL_DIST)];
+  const table = n.stage === 1 ? CARDINAL_POS : n.stage === 2 ? HYBRID_POS : SPOKE_POS;
+  const [d, side] = table[n.slot]!;
+  return [n.id, place(n.branch, d, side)];
 }));
 export const nodePos = (def: NodeDef): Vec => POS[def.id]!;
-export const nodeRadius = (def: NodeDef): number => (def.slot === 'key' || def.id === 'core' ? 25 : 17);
+export const nodeRadius = (def: NodeDef): number => (def.slot === 'final' ? 32 : def.slot === 'key' || def.id === 'core' ? 25 : 17);
 
 export type TreeMode = 'browse' | 'shift';
 
@@ -44,8 +54,11 @@ export interface TreeView {
   flashes: { id: string; life: number }[];
 }
 
-export const newTreeView = (mode: TreeMode, draft: Draft | null): TreeView => ({
-  mode, cam: { x: 0, y: 0, z: 0.8 }, draft, hover: null, drag: null, flashes: [],
+/** Starting zoom and vertical centre per open stage, so the whole open part of the rose fits on screen. */
+const START_CAM: Record<1 | 2 | 3 | 4, { y: number; z: number }> = { 1: { y: 0, z: 0.8 }, 2: { y: 0, z: 0.7 }, 3: { y: 0, z: 0.5 }, 4: { y: -90, z: 0.46 } };
+
+export const newTreeView = (mode: TreeMode, draft: Draft | null, stage: 1 | 2 | 3 | 4 = 1): TreeView => ({
+  mode, cam: { x: 0, y: START_CAM[stage].y, z: START_CAM[stage].z }, draft, hover: null, drag: null, flashes: [],
 });
 
 export const TOP_BAR_H = 44;

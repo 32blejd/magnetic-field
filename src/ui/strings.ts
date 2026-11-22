@@ -16,7 +16,13 @@ export const UPGRADE_TEXT: Record<UpgradeId, { name: string; desc: string }> = {
   speed: { name: 'Coin speed', desc: 'Slows down drifting coins, giving you more time before they escape the board.' },
 };
 
-export const BRANCH_TEXT: Record<Branch, string> = { N: 'Active play', E: 'Coins & events', S: 'Economy', W: 'Automation' };
+export const BRANCH_TEXT: Record<Branch, string> = {
+  N: 'Active play', E: 'Coins & events', S: 'Economy', W: 'Automation',
+  NE: 'Hunter', SE: 'Merchant', SW: 'Foundry', NW: 'Machine',
+  NNE: 'Mastery', ENE: 'Mastery', ESE: 'Mastery', SSE: 'Mastery', SSW: 'Mastery', WSW: 'Mastery', WNW: 'Mastery', NNW: 'Mastery',
+};
+/** Tree stages: 1 compass · 2 broken compass · 3 full rose · 4 the last upgrade. */
+export const STAGE_TEXT: Record<1 | 2 | 3 | 4, string> = { 1: 'THE COMPASS', 2: 'THE BROKEN COMPASS', 3: 'THE FULL ROSE', 4: 'BREAK THE COMPASS' };
 
 export const NODE_TEXT: Record<string, { name: string; desc: string }> = {
   core: { name: 'Polarity Core', desc: 'The heart of the tree. Every Core you have ever earned gives +2% coin value.' },
@@ -48,6 +54,44 @@ export const NODE_TEXT: Record<string, { name: string; desc: string }> = {
   Wb5: { name: 'Homing Prisms', desc: 'Prism coins slowly steer toward your magnet from anywhere on the board.' },
   Wb6: { name: 'Auto-shift', desc: 'Shift polarity automatically at 1×, 2× or 4× the run goal (button in the shift bar, key A). Cores are banked for your next manual shift.' },
   Wkey: { name: 'Drones', desc: 'KEYSTONE · An autonomous magnet chases coins around the board (+1 per level). Ignores anti-coins.' },
+  // stage 2 – the broken compass
+  NEb1: { name: 'Predator', desc: 'Gold, Prism and Void coins are pulled 15% faster per level.' },
+  NEb2: { name: 'Golden Streak', desc: 'While your combo is at its max, Gold chance +3% per level.' },
+  NEb3: { name: 'Trophy', desc: 'Gold coins are worth ×2.5 / ×3 instead of ×2.' },
+  NEkey: { name: 'Polarity', desc: 'KEYSTONE · Your field pushes anti-coins away instead of pulling them. An anti-coin pushed off the board pays like a Prism.' },
+  SEb1: { name: 'Bulk Order', desc: 'Mini-goal rewards +50% per level.' },
+  SEb2: { name: 'Market Day', desc: 'Upgrades cost half during Burst events.' },
+  SEb3: { name: 'Insurance', desc: 'Coins that escape the board still pay 10% of their value per level.' },
+  SEkey: { name: 'Mint', desc: 'KEYSTONE · Every Gold coin you catch splits off two basic coins.' },
+  SWb1: { name: 'Assembly Line', desc: 'Satellite, Drone and Twin Magnet fields +15% per level.' },
+  SWb2: { name: 'Overtime', desc: 'Interest pays every 5 s instead of every 10 s.' },
+  SWb3: { name: 'Smelter', desc: 'The Auto-buyer works twice as fast (up to 8 levels per second).' },
+  SWkey: { name: 'Second Shift', desc: 'KEYSTONE · +1 Drone, and Drones fly 40% faster.' },
+  NWb1: { name: 'Overclock', desc: 'Pulse cooldown −20% per level.' },
+  NWb2: { name: 'Drone Link', desc: 'While Pulse is active, Satellite, Drone and Twin Magnet fields grow with it.' },
+  NWb3: { name: 'Long Pulse', desc: 'Pulse lasts +0.5 s per level.' },
+  NWkey: { name: 'Twin Magnet', desc: 'KEYSTONE · A second magnet mirrors yours through the centre of the board. Ignores anti-coins.' },
+  // stage 3 – the full rose
+  NNEb1: { name: 'Wide Field', desc: '+5% field range per level.' },
+  NNEkey: { name: 'Perfect Field', desc: 'MASTERY · While your combo is at its max, your field is 50% larger.' },
+  ENEb1: { name: 'Fortune', desc: '+0.5% Gold and Prism chance per level.' },
+  ENEkey: { name: 'Jackpot', desc: 'MASTERY · 1% of pickups pay ×25.' },
+  ESEb1: { name: 'Gilding', desc: '+1% Gold chance per level.' },
+  ESEkey: { name: 'Golden Age', desc: 'MASTERY · +10% Gold chance.' },
+  SSEb1: { name: 'Dividend II', desc: '+10% coin value per level.' },
+  SSEkey: { name: 'Compound II', desc: 'MASTERY · Compound gives +2% coin value per minute, up to +100%.' },
+  SSWb1: { name: 'Discount II', desc: 'Upgrades cost 5% less per level.' },
+  SSWkey: { name: 'Blueprint', desc: 'MASTERY · Every run starts with all upgrades unlocked at level 5.' },
+  WSWb1: { name: 'Afterburner', desc: 'Drones fly 15% faster per level.' },
+  WSWkey: { name: 'Swarm', desc: 'MASTERY · +2 Drones.' },
+  WNWb1: { name: 'Shockwave', desc: 'Pulse range +0.5× per level.' },
+  WNWkey: { name: 'Orbit', desc: 'MASTERY · +2 Satellites.' },
+  NNWb1: { name: 'Hot Streak II', desc: 'Combo window +0.3 s per level.' },
+  NNWkey: { name: 'Combo Limit II', desc: 'MASTERY · Max combo multiplier ×3.' },
+  compass: {
+    name: 'Break the Compass',
+    desc: 'THE LAST UPGRADE · Every upgrade can go 50 levels past its cap, coin value ×3, +2 Drones and +2 Satellites. Ends the game – then play on forever.',
+  },
 };
 
 export const ELEMENT_TEXT: Record<Element, string> = { iron: 'Iron', cobalt: 'Cobalt', nickel: 'Nickel', neodymium: 'Neodymium' };
@@ -77,6 +121,8 @@ export const M = {
   pull1: (cost: string) => `PULL ×1 · ${cost} ◈`,
   pull10: (cost: string) => `PULL ×10 · ${cost} ◈`,
   pity: (n: number) => (n <= 1 ? 'Next pull: Epic or better guaranteed' : `Epic or better guaranteed within ${n} pulls`),
+  legendaryPity: 'All lower stones maxed: every pull is a Legendary',
+  collectionDone: (refund: string) => `Collection complete · pulls refund ${refund} ◈`,
   odds: (o: Record<Rarity, number>) => RARITIES_ORDER.map(r => `${RARITY_TEXT[r]} ${Math.round(o[r] * 100)}%`).join(' · '),
   sources: 'Crystals: +1 per mini-goal · +1 per event · +3 per shift · Prisms sometimes drop one',
   collection: 'COLLECTION',
@@ -142,6 +188,7 @@ export const S = {
   unlockHint: (n: string) => `Earn ${n} to unlock`,
 
   prestigeTitle: 'POLARITY SHIFT',
+  endlessTitle: 'POLARITY SHIFT · ENDLESS',
   prestigeProgress: (goal: string, earned: string) => `Earn ${goal} this run · ${earned}`,
   prestigeReadyTitle: 'POLARITY SHIFT · READY',
   prestigeReadyLine: (earned: string) => `Earned ${earned} · shift now for`,
@@ -168,7 +215,8 @@ export const S = {
   treeHintBuy: 'click: buy · right-click: refund (free)',
   treeHintDrag: 'drag · scroll to zoom',
   treeHintBrowse: 'drag · scroll to zoom · hover for details',
-  treeHintReveal: 'new nodes appear next to owned ones',
+  treeHintReveal: 'new nodes appear next to owned ones · max a stage to open the next',
+  treeStage: (n: number, name: string) => `STAGE ${n}/4 · ${name}`,
   treeBack: '◀  BACK TO RUN',
   treeNotYet: '◀  NOT YET',
   treeUndo: 'UNDO',
@@ -250,4 +298,12 @@ export const MENU = {
   on: 'ON',
   off: 'OFF',
   back: '◀  BACK',
+  endlessSummary: (shifts: string, time: string) => `Endless · shift ${shifts} · run ${time}`,
+
+  endTitle: 'THE COMPASS IS BROKEN',
+  endThanks: 'THANK YOU FOR PLAYING',
+  endStats: (shifts: string, cores: string, stones: string) => `${shifts} Polarity Shifts · ${cores} ◆ Cores earned · ${stones}/16 Lodestones`,
+  endCredits: 'Magnetic Field – an incremental game about one magnet and a lot of coins',
+  endEndless: 'From now on every upgrade can go 50 levels past its cap, and the run goal keeps growing forever.',
+  endPlayOn: 'PLAY ON · ENDLESS',
 };

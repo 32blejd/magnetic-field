@@ -7,8 +7,10 @@
    ?speed=N     run the game clock N× faster (1–50, e.g. 4 = a whole first run in ~3.5 min)
    ?rare=1      boost Gold/Prism chances (and Void, if its keystone is owned)
    ?anti=1      boost anti-coin chance (needs earned ≥ 25000)
-   ?open=shift  open the Core tree on load (shift = spend Cores, needs the goal earned; browse = preview; gacha = Magnetron)
-   ?nodes=…     own Core tree nodes: comma-separated ids with an optional level (Nkey:3,Wb2), or "all" for every node maxed
+   ?open=shift  open the Core tree on load (shift = spend Cores, needs the goal earned; browse = preview; gacha = Magnetron;
+                ending = the ending screen)
+   ?nodes=…     own Core tree nodes: comma-separated ids with an optional level (Nkey:3,Wb2), "stage1"/"stage2"/"stage3" for every
+                node up to that stage maxed (opens the next one), or "all" for every node maxed (incl. Break the Compass = endless)
    ?nosave=1    don't load or write the save
    Any of these params skips the title screen and starts the run right away. */
 import { NODES, NODE_BY_ID } from './data/prestige';
@@ -31,17 +33,19 @@ export interface DebugOptions {
   warm: number;
   /** Game clock multiplier (1 = normal). */
   speed: number;
-  open: 'shift' | 'browse' | 'gacha' | null;
+  open: 'shift' | 'browse' | 'gacha' | 'ending' | null;
   /** Node levels to set, or null. */
   nodes: Record<string, number> | null;
 }
 
-/** "all" → every node at max; otherwise "Nkey:3,Wb2" → { Nkey: 3, Wb2: 1 } (unknown ids skipped, levels clamped). */
+/** "all" → every node at max; "stage2" → every node of stages 1–2 at max; otherwise "Nkey:3,Wb2" → { Nkey: 3, Wb2: 1 }
+    (unknown ids skipped, levels clamped). */
 export function parseNodes(value: string | null): Record<string, number> | null {
   if (!value) return null;
   const out: Record<string, number> = {};
-  if (value === 'all') {
-    for (const n of NODES) if (n.id !== 'core') out[n.id] = n.max;
+  const upTo = value === 'all' ? 4 : /^stage[1-3]$/.test(value) ? Number(value.slice(5)) : 0;
+  if (upTo) {
+    for (const n of NODES) if (n.id !== 'core' && n.stage <= upTo) out[n.id] = n.max;
     return out;
   }
   for (const part of value.split(',')) {
@@ -72,7 +76,7 @@ export function readDebugOptions(search: string): DebugOptions {
     pulls: Number(p.get('pulls')) || 0,
     warm: Number(p.get('warm')) || 0,
     speed: Math.min(50, Math.max(1, Number(p.get('speed')) || 1)),
-    open: (['shift', 'browse', 'gacha'] as const).find(o => o === p.get('open')) ?? null,
+    open: (['shift', 'browse', 'gacha', 'ending'] as const).find(o => o === p.get('open')) ?? null,
     nodes: parseNodes(p.get('nodes')),
   };
 }

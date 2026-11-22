@@ -1,11 +1,13 @@
 /* Core tree screen (browse / spend Cores), the confirm dialog over it, and the polarity-flip animation. */
-import { BRANCHES, NODES, parentsOf, type NodeDef } from '../data/prestige';
+import { BRANCHES, HYBRIDS, NODES, SPOKES, parentsOf, type Branch, type NodeDef } from '../data/prestige';
 import { VIEW } from '../data/tuning';
-import { canBuyNode, canRefundNode, draftSummary, nodeCost, nodeLevel, nodeMaxed, nextShiftGoal, nodeVisible, shiftGoal } from '../game/prestige';
+import {
+  canBuyNode, canRefundNode, draftSummary, nodeCost, nodeLevel, nodeMaxed, nextShiftGoal, nodeVisible, openStage, shiftGoal,
+} from '../game/prestige';
 import type { GameState, Vec } from '../game/types';
 import { formatNumber, formatShort } from '../ui/format';
 import { inRect, type Rect } from '../ui/layout';
-import { BRANCH_TEXT, NODE_TEXT, S } from '../ui/strings';
+import { BRANCH_TEXT, NODE_TEXT, S, STAGE_TEXT } from '../ui/strings';
 import {
   AXES, CONFIRM, CONFIRM_BACK, CONFIRM_OK, TOP_BAR_H, TREE_BUTTONS, branchPoint, nodePos, nodeRadius, toScreen, type TreeView,
 } from '../ui/treeLayout';
@@ -30,18 +32,27 @@ export function treeButtons(v: TreeView): TreeButton[] {
   ];
 }
 
-function drawBackground(ctx: Ctx, v: TreeView, t: number): void {
+function drawBackground(ctx: Ctx, st: GameState, v: TreeView, t: number): void {
   ctx.fillStyle = COLORS.bg; ctx.fillRect(0, 0, W, H);
-  for (const b of BRANCHES) { // glow toward each compass direction + a big faint letter past the keystone
-    const col = BRANCH_COLOR[b], p = toScreen(v, branchPoint(b, 420)), r = 300 * v.cam.z;
+  const stage = openStage(shownNodes(st, v));
+  // glow toward each open compass direction + a faint letter past the branch (big for cardinals, smaller later)
+  const labels: [Branch, number, number, number][] = [ // branch, label distance, letter size, glow radius
+    ...BRANCHES.map(b => [b, stage >= 3 ? 790 : 540, 110, 300] as [Branch, number, number, number]),
+    ...(stage >= 2 ? HYBRIDS.map(b => [b, stage >= 3 ? 700 : 450, 60, 200] as [Branch, number, number, number]) : []),
+    ...(stage >= 3 ? SPOKES.map(b => [b, 640, 30, 140] as [Branch, number, number, number]) : []),
+  ];
+  for (const [b, dist, size, glowR] of labels) {
+    const col = BRANCH_COLOR[b], p = toScreen(v, branchPoint(b, dist - 120)), r = glowR * v.cam.z;
     const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, r);
     g.addColorStop(0, col + '20'); g.addColorStop(1, col + '00');
     ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
-    const l = toScreen(v, branchPoint(b, 540));
+    const l = toScreen(v, branchPoint(b, dist));
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillStyle = col + '22'; ctx.font = `700 ${Math.round(110 * v.cam.z)}px ${FONT}`; ctx.fillText(b, l.x, l.y);
-    ctx.fillStyle = col + '55'; ctx.font = `700 ${Math.round(13 * v.cam.z)}px ${FONT}`;
-    ctx.fillText(BRANCH_TEXT[b].toUpperCase(), l.x, l.y + 70 * v.cam.z);
+    ctx.fillStyle = col + '22'; ctx.font = `700 ${Math.round(size * v.cam.z)}px ${FONT}`; ctx.fillText(b, l.x, l.y);
+    if (size >= 60 && stage < 3) { // branch names only while the rose is still sparse
+      ctx.fillStyle = col + '55'; ctx.font = `700 ${Math.round(13 * v.cam.z)}px ${FONT}`;
+      ctx.fillText(BRANCH_TEXT[b].toUpperCase(), l.x, l.y + size * 0.64 * v.cam.z);
+    }
   }
   ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
   const c0 = toScreen(v, { x: 0, y: 0 });
@@ -85,13 +96,13 @@ function drawNodes(ctx: Ctx, st: GameState, v: TreeView, t: number): void {
       if (!canBuy) ctx.setLineDash([3, 3]);
       ctx.stroke(); ctx.setLineDash([]); noGlow(ctx);
     }
-    if (n.slot === 'key' || n.id === 'core') {
+    if (n.slot === 'key' || n.slot === 'final' || n.id === 'core') {
       ctx.strokeStyle = col + (lv ? 'aa' : '44'); ctx.lineWidth = 1;
       hexPath(ctx, p.x, p.y, r + 6 * z, Math.PI / 6 + t * 0.4); ctx.stroke();
     }
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.fillStyle = lv ? '#fff' : canBuy ? col : col + '99';
-    ctx.font = `700 ${Math.round((n.slot === 'key' ? 15 : 12) * z)}px ${FONT}`;
+    ctx.font = `700 ${Math.round((n.slot === 'final' ? 20 : n.slot === 'key' ? 15 : 12) * z)}px ${FONT}`;
     ctx.fillText(n.icon, p.x, p.y + 1);
     if (n.id !== 'core') { // level pips + next cost
       const yy = p.y + r + 9 * z;
@@ -171,6 +182,9 @@ function drawHud(ctx: Ctx, st: GameState, v: TreeView, cursor: Vec | null): void
   ctx.fillStyle = 'rgba(95,155,179,.75)'; ctx.font = `9px ${FONT}`;
   const hints = v.mode === 'browse' ? [S.treeHintBrowse, S.treeHintReveal] : [S.treeHintBuy, S.treeHintDrag, S.treeHintReveal];
   hints.forEach((l, i) => ctx.fillText(l, 20, H - 112 + i * 11));
+  const stage = openStage(shownNodes(st, v)); // which part of the rose is open, above the legend
+  ctx.fillStyle = BRANCH_COLOR[stage === 4 ? 'final' : 'core']; ctx.font = `700 10px ${FONT}`;
+  ctx.fillText(S.treeStage(stage, STAGE_TEXT[stage]), 14, H - 134);
 
   for (const b of treeButtons(v)) drawButton(ctx, b.rect, b.label, b.primary, !!cursor && inRect(cursor, b.rect));
 }
@@ -194,7 +208,8 @@ function drawTooltip(ctx: Ctx, st: GameState, v: TreeView, cursor: Vec): void {
   ctx.textBaseline = 'top';
   ctx.fillStyle = col; ctx.font = `700 12px ${FONT}`; ctx.fillText(text.name.toUpperCase(), x + 12, y + 10);
   ctx.fillStyle = COLORS.sub; ctx.font = `10px ${FONT}`;
-  ctx.fillText(n.branch === 'core' ? 'POLARITY CORE' : `${n.branch} · ${BRANCH_TEXT[n.branch].toUpperCase()}`, x + 12, y + 27);
+  ctx.fillText(n.branch === 'core' ? 'POLARITY CORE' : n.branch === 'final' ? STAGE_TEXT[4]
+    : `${n.branch} · ${BRANCH_TEXT[n.branch].toUpperCase()}`, x + 12, y + 27);
   ctx.fillStyle = COLORS.text; ctx.font = `11px ${FONT}`; lines.forEach((l, i) => ctx.fillText(l, x + 12, y + 44 + i * 15));
   let foot: string, footCol: string;
   if (n.id === 'core') { foot = S.nodeAlways; footCol = col; }
@@ -211,7 +226,7 @@ function drawTooltip(ctx: Ctx, st: GameState, v: TreeView, cursor: Vec): void {
 }
 
 export function drawTree(ctx: Ctx, st: GameState, v: TreeView, cursor: Vec | null, t: number): void {
-  drawBackground(ctx, v, t);
+  drawBackground(ctx, st, v, t);
   drawEdges(ctx, st, v, t);
   drawNodes(ctx, st, v, t);
   drawHud(ctx, st, v, cursor);
@@ -243,7 +258,7 @@ export function drawConfirm(ctx: Ctx, st: GameState, v: TreeView, cursor: Vec | 
   column(M.x + 30, S.confirmResets, COLORS.red, S.confirmResetList);
   column(M.x + 250, S.confirmKeeps, COLORS.cyan, S.confirmKeepList);
   ctx.textAlign = 'center'; ctx.fillStyle = COLORS.amber; ctx.font = `700 12px ${FONT}`;
-  ctx.fillText(S.confirmNextGoal(formatShort(nextShiftGoal(st.meta))), cx, M.y + 252); ctx.textAlign = 'left';
+  ctx.fillText(S.confirmNextGoal(formatShort(nextShiftGoal({ ...st.meta, nodes: draft.nodes }))), cx, M.y + 252); ctx.textAlign = 'left'; // a stage opened in the draft raises it
   drawButton(ctx, CONFIRM_OK, S.confirmOk, true, !!cursor && inRect(cursor, CONFIRM_OK), COLORS.magenta);
   drawButton(ctx, CONFIRM_BACK, S.confirmBack, false, !!cursor && inRect(cursor, CONFIRM_BACK));
 }

@@ -1,6 +1,6 @@
-import { ANTI, BOARD, COIN_RADIUS, DRONES, MAGNET_RADIUS, SATELLITES, SPAWN_TIME } from '../data/tuning';
+import { ANTI, BOARD, COIN_RADIUS, DRONES, MAGNET_RADIUS, SATELLITES, SPAWN_TIME, TWIN } from '../data/tuning';
 import { comboMult } from '../game/abilities';
-import { satellitePositions } from '../game/helpers';
+import { satellitePositions, twinPosition } from '../game/helpers';
 import { bonuses } from '../game/prestige';
 import type { Stats } from '../game/stats';
 import type { AntiWarning, Coin, GameState, Vec } from '../game/types';
@@ -156,8 +156,8 @@ function drawEffects(ctx: Ctx, st: GameState, fx: Effects): void {
 }
 
 /** Satellites: small magenta hexes tethered to the magnet by a faint beam, each with a soft glowing field. */
-function drawSatellites(ctx: Ctx, st: GameState, m: Vec, baseRange: number, count: number): void {
-  const range = baseRange * SATELLITES.range;
+function drawSatellites(ctx: Ctx, st: GameState, m: Vec, baseRange: number, count: number, scale: number): void {
+  const range = baseRange * SATELLITES.range * scale;
   for (const p of satellitePositions(st, m, baseRange, count)) {
     ctx.strokeStyle = 'rgba(255,43,214,.22)'; ctx.lineWidth = 1;
     ctx.beginPath(); ctx.moveTo(m.x, m.y); ctx.lineTo(p.x, p.y); ctx.stroke();
@@ -170,8 +170,8 @@ function drawSatellites(ctx: Ctx, st: GameState, m: Vec, baseRange: number, coun
 }
 
 /** Drones: small green ships pointing where they fly, with a thruster trail and a faint field ring. */
-function drawDrones(ctx: Ctx, st: GameState, fx: Effects, baseRange: number): void {
-  const range = baseRange * DRONES.range;
+function drawDrones(ctx: Ctx, st: GameState, fx: Effects, baseRange: number, scale: number): void {
+  const range = baseRange * DRONES.range * scale;
   for (const d of st.drones) {
     const { trail, dir } = fx.droneLook(d);
     ctx.strokeStyle = 'rgba(77,255,154,.12)'; ctx.lineWidth = 1;
@@ -190,6 +190,17 @@ function drawDrones(ctx: Ctx, st: GameState, fx: Effects, baseRange: number): vo
     ctx.lineTo(d.x + Math.cos(dir - 2.5) * r, d.y + Math.sin(dir - 2.5) * r);
     ctx.closePath(); ctx.fill(); ctx.stroke(); noGlow(ctx);
   }
+}
+
+/** Twin Magnet: a violet echo of the magnet mirrored through the board centre, linked to it by a faint dashed line. */
+function drawTwin(ctx: Ctx, st: GameState, m: Vec, range: number): void {
+  const p = twinPosition(m);
+  ctx.strokeStyle = 'rgba(185,140,255,.12)'; ctx.lineWidth = 1; ctx.setLineDash([3, 9]);
+  ctx.beginPath(); ctx.moveTo(m.x, m.y); ctx.lineTo(p.x, p.y); ctx.stroke();
+  ctx.lineDashOffset = -st.t * 20; ctx.setLineDash([6, 6]); ctx.strokeStyle = 'rgba(185,140,255,.5)';
+  glow(ctx, COLORS.core, 8); ctx.beginPath(); ctx.arc(p.x, p.y, range, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
+  ctx.lineWidth = 2.2; ctx.strokeStyle = COLORS.core; ctx.beginPath(); ctx.arc(p.x, p.y, MAGNET_RADIUS, 0, Math.PI * 2); ctx.stroke();
+  ctx.fillStyle = '#e8dcff'; ctx.beginPath(); ctx.arc(p.x, p.y, 2.5, 0, Math.PI * 2); ctx.fill(); noGlow(ctx);
 }
 
 function drawMagnet(ctx: Ctx, st: GameState, m: Vec, range: number): void {
@@ -262,8 +273,12 @@ export function drawBoard(ctx: Ctx, st: GameState, fx: Effects, magnet: Vec | nu
   drawCoins(ctx, st, fx);
   for (const w of st.warnings) drawWarning(ctx, w, st.t);
   drawEffects(ctx, st, fx);
-  drawDrones(ctx, st, fx, stats.baseRange);
-  if (magnet && st.stunT <= 0) drawSatellites(ctx, st, magnet, stats.baseRange, bonuses(st.meta).satellites);
+  const b = bonuses(st.meta);
+  drawDrones(ctx, st, fx, stats.baseRange, b.helperRangeMult);
+  if (magnet && st.stunT <= 0) {
+    drawSatellites(ctx, st, magnet, stats.baseRange, b.satellites, b.helperRangeMult);
+    if (b.twinMagnet) drawTwin(ctx, st, magnet, stats.baseRange * TWIN.range * b.helperRangeMult);
+  }
   if (magnet) drawMagnet(ctx, st, magnet, stats.range);
   drawFloats(ctx, st, fx);
   drawHud(ctx, st);

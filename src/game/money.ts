@@ -1,11 +1,12 @@
 /* All gameplay arithmetic and comparisons on currency live here and in game/shop.ts (which adds Core tree discounts).
    Other code only stores, saves or formats the values, so a future switch to break_eternity.js mostly touches these files
    (plus the save format, ui/format.ts and the income readout in render/effects.ts). */
-import type { UpgradeDef } from '../data/upgrades';
+import { OVERCAP_GROWTH, type UpgradeDef } from '../data/upgrades';
 import type { GameState } from './types';
 
 /** Base cost of buying `level + 1` of an upgrade (before Core tree discounts). */
 export function costOf(def: UpgradeDef, level: number): number {
+  if (level >= def.max) return Math.round(costOf(def, def.max - 1) * OVERCAP_GROWTH ** (level - def.max + 1)); // Break the Compass levels
   const s = def.steep;
   const extra = s && level >= s.from ? s.mult ** (level - s.from + 1) : 1;
   return Math.round(def.base * def.growth ** level * extra);
@@ -31,6 +32,9 @@ export const goalReward = (perCoin: number, spawnPerSecond: number, seconds: num
 
 /** Interest payout: `rate` of the held coins, but never more than `cap`. */
 export const interestOn = (held: number, rate: number, cap: number): number => Math.max(0, Math.min(held * rate, cap));
+
+/** Insurance: the share of an escaped coin's value that is paid out anyway. */
+export const insurancePayout = (coinWorth: number, share: number): number => coinWorth * share;
 
 /** Value of one collected coin. */
 export const coinValue = (perCoin: number, tierMult: number, comboMultiplier: number): number => perCoin * tierMult * comboMultiplier;

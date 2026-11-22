@@ -3,6 +3,7 @@ import { GACHA, LODESTONE_BY_ID } from '../data/lodestones';
 import { AUTO_SHIFT_TARGETS, NODE_BY_ID } from '../data/prestige';
 import { EVENTS } from '../data/tuning';
 import { UPGRADES, UPGRADE_IDS, type UpgradeId } from '../data/upgrades';
+import { levelCap } from '../game/shop';
 import { createState } from '../game/state';
 import type { FeatureId, GameState, MetaState } from '../game/types';
 import { CURRENT_VERSION, migrate, type SaveData } from './migrations';
@@ -71,7 +72,7 @@ export function fromSave(data: SaveData): GameState {
   st.totalEarned = Math.max(0, data.totalEarned); // may be below money: Head Start coins aren't "earned"
   for (const u of UPGRADES) {
     const lv = data.levels[u.id];
-    if (typeof lv === 'number' && Number.isFinite(lv)) st.levels[u.id] = Math.max(0, Math.min(u.max, Math.floor(lv)));
+    if (typeof lv === 'number' && Number.isFinite(lv)) st.levels[u.id] = Math.max(0, Math.min(levelCap(st, u), Math.floor(lv)));
     if (data.unlocked?.[u.id] === true) st.unlocked[u.id] = true;
   }
   const known = new Set<string>(UPGRADE_IDS);

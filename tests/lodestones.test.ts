@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { GACHA, LODESTONES } from '../src/data/lodestones';
 import { BOARD, STEP } from '../src/data/tuning';
-import { canPull, magnetronUnlocked, pull, pullMany } from '../src/game/lodestones';
+import { canPull, collectionComplete, legendaryPity, magnetronUnlocked, pull, pullMany } from '../src/game/lodestones';
 import { bonuses } from '../src/game/prestige';
 import { step } from '../src/game/simulation';
 import { createState, emptyMeta } from '../src/game/state';
@@ -24,7 +24,10 @@ describe('Magnetron', () => {
     expect(LODESTONES).toHaveLength(16);
     const st = unlocked(10 * 5000);
     const counts = { common: 0, rare: 0, epic: 0, legendary: 0 };
-    for (const r of pullMany(st, 5000)) counts[r.def.rarity]++;
+    for (let i = 0; i < 5000; i++) {
+      st.meta.lodestones = {}; // a fresh collection each time, so the Legendary pity never kicks in
+      counts[pull(st)!.def.rarity]++;
+    }
     expect(counts.common / 5000).toBeGreaterThan(0.38);
     expect(counts.common / 5000).toBeLessThan(0.5);
     expect(counts.legendary / 5000).toBeGreaterThan(0.05);
@@ -38,6 +41,25 @@ describe('Magnetron', () => {
     expect(r.pity).toBe(true);
     expect(['epic', 'legendary']).toContain(r.def.rarity);
     expect(st.meta.pity).toBe(0);
+  });
+
+  it('gives only not-yet-maxed Legendaries once every lower stone is maxed', () => {
+    const st = unlocked(1000);
+    for (const l of LODESTONES) if (l.rarity !== 'legendary') st.meta.lodestones[l.id] = GACHA.maxLevel;
+    st.meta.lodestones['iron-legendary'] = GACHA.maxLevel;
+    st.meta.lodestones['cobalt-legendary'] = 2;
+    expect(legendaryPity(st)).toBe(true);
+    const results = pullMany(st, 7); // 1 + 3 + 3 levels left on Cobalt, Nickel, Neodymium Crowns
+    expect(results.every(r => r.def.rarity === 'legendary' && r.def.id !== 'iron-legendary' && r.refund === 0 && r.pity)).toBe(true);
+    expect(collectionComplete(st)).toBe(true);
+    expect(pull(st)!.refund).toBe(GACHA.maxedRefund); // nothing left: duplicates refund as before
+  });
+
+  it('keeps normal odds while a lower stone is below max level', () => {
+    const st = unlocked(1000);
+    for (const l of LODESTONES) if (l.rarity !== 'legendary') st.meta.lodestones[l.id] = GACHA.maxLevel;
+    st.meta.lodestones['iron-common'] = 2;
+    expect(legendaryPity(st)).toBe(false);
   });
 
   it('levels duplicates up to 3 and refunds crystals after that', () => {

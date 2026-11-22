@@ -18,7 +18,7 @@ export function drawPrestigeBar(ctx: Ctx, st: GameState, cursor: Vec | null, t: 
 
   ctx.textBaseline = 'middle';
   ctx.fillStyle = COLORS.magenta; ctx.font = `700 11px ${FONT}`;
-  ctx.fillText(ready ? S.prestigeReadyTitle : S.prestigeTitle, R.x + 16, R.y + 18);
+  ctx.fillText(ready ? S.prestigeReadyTitle : bonuses(st.meta).compassBroken ? S.endlessTitle : S.prestigeTitle, R.x + 16, R.y + 18);
   ctx.font = `11px ${FONT}`; ctx.fillStyle = COLORS.sub;
   if (ready) {
     const line = S.prestigeReadyLine(formatShort(st.totalEarned));

@@ -22,7 +22,7 @@ export function autoBuy(st: GameState, b: Bonuses, dt: number, out: GameEvent[])
     if (score < bestScore) { bestScore = score; best = u; }
   }
   if (!best || !buy(st, best)) return;
-  st.autoBuyT = AUTO.buyEvery;
+  st.autoBuyT = b.autoBuyEvery;
   out.push({ type: 'autobuy', id: best.id });
 }
 

@@ -23,7 +23,8 @@ export const GACHA = {
   pullCost: 10,
   /** Pull chances by rarity (sum = 1). */
   odds: { common: 0.45, rare: 0.32, epic: 0.17, legendary: 0.06 } as Record<Rarity, number>,
-  /** An Epic or better is guaranteed on this pull if none dropped in the previous ones. */
+  /** An Epic or better is guaranteed on this pull if none dropped in the previous ones.
+      Once every Common, Rare and Epic stone is at max level, every pull is a not-yet-maxed Legendary instead (game/lodestones.ts). */
   pity: 20,
   maxLevel: 3,
   /** Crystals refunded for a duplicate of a max-level stone. */

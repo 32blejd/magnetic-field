@@ -28,6 +28,9 @@ export const PAUSE_BUTTONS: { action: PauseAction; rect: Rect }[] = (['resume', 
   action, rect: { x: PAUSE_BOX.x + 30, y: PAUSE_BOX.y + 86 + i * 54, w: PAUSE_BOX.w - 60, h: 42 },
 }));
 
+/** Ending screen button. */
+export const ENDING_BUTTON: Rect = { x: 960 / 2 - 140, y: 440, w: 280, h: 44 };
+
 export const SETTINGS_BOX: Rect = { x: 230, y: 70, w: 500, h: 400 };
 const SX = SETTINGS_BOX.x + 40;
 /** Left edge of the setting labels. */

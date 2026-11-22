@@ -20,8 +20,9 @@ export function comboMult(combo: number, max: number = COMBO.max): number {
 
 export function triggerPulse(st: GameState): boolean {
   if (!pulseUnlocked(st) || st.pulseCd > 0) return false;
-  st.pulseT = PULSE.duration;
-  st.pulseCd = bonuses(st.meta).pulseCooldown;
+  const b = bonuses(st.meta);
+  st.pulseT = b.pulseDuration;
+  st.pulseCd = b.pulseCooldown;
   return true;
 }
 

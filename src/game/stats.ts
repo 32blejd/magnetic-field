@@ -1,6 +1,7 @@
 import { BOARD, EVENTS } from '../data/tuning';
-import { UPGRADE_BY_ID, type UpgradeId } from '../data/upgrades';
-import { bonuses, compoundMult } from './prestige';
+import { UPGRADE_BY_ID, effectAt, type UpgradeId } from '../data/upgrades';
+import { comboMult } from './abilities';
+import { PERFECT_FIELD, bonuses, compoundMult } from './prestige';
 import type { GameState } from './types';
 
 /** Cursor speed (logical px/s) at which Momentum gives its full range bonus. */
@@ -28,14 +29,15 @@ export interface Stats {
 
 /** Raw effect of an upgrade at its current level (no Core tree bonuses). */
 export function upgradeEffect(st: GameState, id: UpgradeId): number {
-  return UPGRADE_BY_ID[id].fx(st.levels[id]);
+  return effectAt(UPGRADE_BY_ID[id], st.levels[id]);
 }
 
 export function getStats(st: GameState): Stats {
   const f = (id: UpgradeId) => upgradeEffect(st, id);
   const b = bonuses(st.meta);
   // Momentum: up to +b.momentum range at full cursor speed (500 px/s)
-  const baseRange = f('range') * (b.rangeMult + b.momentum * Math.min(1, st.magnetSpeed / MOMENTUM_FULL_SPEED));
+  const perfect = b.perfectField && comboMult(st.combo, b.comboMax) >= b.comboMax ? PERFECT_FIELD : 1; // Perfect Field at max combo
+  const baseRange = f('range') * (b.rangeMult + b.momentum * Math.min(1, st.magnetSpeed / MOMENTUM_FULL_SPEED)) * perfect;
   let spawn = f('spawn');
   let capacity = f('capacity');
   if (st.event?.type === 'burst') {

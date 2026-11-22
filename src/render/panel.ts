@@ -1,8 +1,9 @@
 import { VIEW } from '../data/tuning';
+import { effectAt } from '../data/upgrades';
 import { upgradeUnlockAt } from '../game/abilities';
 import { magnetronUnlocked } from '../game/lodestones';
 import { bonuses } from '../game/prestige';
-import { canBuy, isMaxed, nextCost } from '../game/shop';
+import { canBuy, isMaxed, levelCap, nextCost } from '../game/shop';
 import type { GameState, Vec } from '../game/types';
 import { formatNumber, formatShort, formatUpgradeValue } from '../ui/format';
 import { AUTO_BUY_BUTTON, MAGNETRON_BUTTON, buttonRect, inRect, PANEL, rowAt, rowRect, visibleRows } from '../ui/layout';
@@ -27,7 +28,7 @@ export function drawPanel(ctx: Ctx, st: GameState, fx: Effects, cursor: Vec | nu
     ctx.globalAlpha = Math.min(1, g.life / 0.4);
     const col = g.color ?? COLORS.amber;
     glow(ctx, col, 12); ctx.fillStyle = col; ctx.font = `700 15px ${FONT}`; ctx.textAlign = 'right';
-    ctx.fillText(g.text, P.x + P.w - 14, P.y + 34 - k * 22 - i * 16); noGlow(ctx);
+    ctx.fillText(g.text, P.x + P.w - 44, P.y + 34 - k * 22 - i * 16); noGlow(ctx); // left of the ⚙ button
     ctx.textAlign = 'left'; ctx.globalAlpha = 1;
   });
   ctx.fillStyle = COLORS.magenta; ctx.font = `700 11px ${FONT}`; ctx.fillText(S.upgradesTitle, P.x + 16, P.y + 82);
@@ -58,10 +59,10 @@ export function drawPanel(ctx: Ctx, st: GameState, fx: Effects, cursor: Vec | nu
 
     const maxed = isMaxed(st, def), ok = canBuy(st, def), hover = cursor !== null && inRect(cursor, b);
     ctx.fillStyle = COLORS.text; ctx.font = `600 13px ${FONT}`; ctx.fillText(text.name.toUpperCase(), r.x + 10, r.y + 15);
-    ctx.fillStyle = COLORS.sub; ctx.font = `10px ${FONT}`; ctx.fillText(S.level(formatNumber(lv), formatNumber(def.max), i + 1), r.x + 10, r.y + 30);
-    const now = formatUpgradeValue(def.id, def.fx(lv));
+    ctx.fillStyle = COLORS.sub; ctx.font = `10px ${FONT}`; ctx.fillText(S.level(formatNumber(lv), formatNumber(levelCap(st, def)), i + 1), r.x + 10, r.y + 30);
+    const now = formatUpgradeValue(def.id, effectAt(def, lv));
     ctx.fillStyle = COLORS.text;
-    ctx.fillText(maxed ? now : `${now} → ${formatUpgradeValue(def.id, def.fx(lv + 1))}`, r.x + 10, r.y + 43);
+    ctx.fillText(maxed ? now : `${now} → ${formatUpgradeValue(def.id, effectAt(def, lv + 1))}`, r.x + 10, r.y + 43);
 
     ctx.textAlign = 'center';
     if (maxed) {

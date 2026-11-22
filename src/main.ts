@@ -3,7 +3,7 @@ import { BOARD, STEP, VIEW } from './data/tuning';
 import { triggerPulse } from './game/abilities';
 import { magnetronUnlocked, pullMany } from './game/lodestones';
 import {
-  autoShiftDue, bonuses, buyNode, canShift, commitAutoShift, commitShift, nextAutoShiftTarget, refundNode, resetDraft, shiftGoal, startDraft,
+  autoShiftDue, bonuses, buyNode, canShift, openStage, commitAutoShift, commitShift, nextAutoShiftTarget, refundNode, resetDraft, shiftGoal, startDraft,
   treeUnlocked,
 } from './game/prestige';
 import { buy, buyMax, canBuy } from './game/shop';
@@ -18,14 +18,14 @@ import { autoShiftVisible, drawPrestigeBar, prestigeButtonAction } from './rende
 import { COLORS } from './render/theme';
 import { cellAt, drawMagnetron } from './render/magnetron';
 import { drawConfirm, drawShiftAnim, drawTree, nodeAt, treeButtons } from './render/tree';
-import { drawGear, drawNewGameConfirm, drawPause, drawSettings, drawTitle } from './render/menu';
+import { drawEnding, drawGear, drawNewGameConfirm, drawPause, drawSettings, drawTitle } from './render/menu';
 import { AUTOSAVE_INTERVAL, clearSave, loadGame, saveGame, type LoadResult } from './save/save';
 import { loadSettings, saveSettings, type VolumeId } from './save/settings';
 import { rowKey, setupInput } from './ui/input';
 import { AUTO_BUY_BUTTON, AUTO_SHIFT_BUTTON, MAGNETRON_BUTTON, PRESTIGE_BUTTON, buttonRect, inRect, visibleRows } from './ui/layout';
 import { MAG_BACK, PULL1, PULL10, newMagnetronView, type MagnetronView } from './ui/magnetronLayout';
 import {
-  GEAR_BUTTON, NEWGAME_CANCEL, NEWGAME_ERASE, PAUSE_BUTTONS, SETTINGS_BACK, SLIDERS, TOGGLES, sliderHit, sliderValue, titleButtons,
+  ENDING_BUTTON, GEAR_BUTTON, NEWGAME_CANCEL, NEWGAME_ERASE, PAUSE_BUTTONS, SETTINGS_BACK, SLIDERS, TOGGLES, sliderHit, sliderValue, titleButtons,
 } from './ui/menuLayout';
 import { formatNumber, formatShort } from './ui/format';
 import { S } from './ui/strings';
@@ -64,14 +64,16 @@ const events: GameEvent[] = [];
 let cursor: Vec | null = null;
 
 /** title = title screen · newgame = erase confirm over it · run = playing · pause = pause menu · settings (from the title or the pause menu) ·
-    tree = Core tree (browse or spend) · confirm = dialog over the tree · shift = polarity-flip animation · gacha = Magnetron */
-type Screen = 'title' | 'newgame' | 'run' | 'pause' | 'settings' | 'tree' | 'confirm' | 'shift' | 'gacha';
+    tree = Core tree (browse or spend) · confirm = dialog over the tree · shift = polarity-flip animation · gacha = Magnetron ·
+    ending = the thank-you screen after Break the Compass */
+type Screen = 'title' | 'newgame' | 'run' | 'pause' | 'settings' | 'tree' | 'confirm' | 'shift' | 'gacha' | 'ending';
 let magnetron: MagnetronView | null = null;
 let screen: Screen = debug.skipTitle ? 'run' : 'title'; // debug URL params start the run directly
 let settingsFrom: 'title' | 'pause' = 'title';
 let dragSlider: VolumeId | null = null;
 let tree: TreeView | null = null;
 let shiftAnim = 0;
+let endingT = 0;
 const SHIFT_ANIM = 1.1;
 let uiTime = 0; // keeps UI animations running while the simulation is paused
 
@@ -136,7 +138,7 @@ function toggleFullscreen(): void {
   else document.documentElement.requestFullscreen?.().catch(() => {});
 }
 function openTree(mode: TreeMode): void {
-  tree = newTreeView(mode, mode === 'shift' ? startDraft(st) : null);
+  tree = newTreeView(mode, mode === 'shift' ? startDraft(st) : null, openStage(st.meta.nodes));
   screen = 'tree';
 }
 function closeTree(): void { tree = null; screen = 'run'; }
@@ -149,17 +151,21 @@ function doPull(count: number): void {
 }
 function finishShift(): void {
   if (!tree?.draft) return;
+  const wasBroken = bonuses(st.meta).compassBroken;
   commitShift(st, tree.draft);
   fx.reset();
   fx.banner(S.shiftDone(String(st.meta.shifts)), S.shiftDoneSub(formatShort(shiftGoal(st.meta))), COLORS.core, 4);
   lastBoardPos = null;
   save();
   closeTree();
+  if (!wasBroken && bonuses(st.meta).compassBroken) openEnding(); // Break the Compass was just bought
 }
+function openEnding(): void { screen = 'ending'; endingT = 0; }
 
 if (debug.open === 'shift' && canShift(st)) openTree('shift');
 else if (debug.open === 'browse') openTree('browse');
 else if (debug.open === 'gacha') openMagnetron();
+else if (debug.open === 'ending') openEnding();
 
 // ---- input ----
 function tryBuy(row: number, bulk: boolean): void {
@@ -201,6 +207,8 @@ function updateCursorStyle(p: Vec): void {
   } else if (screen === 'tree' && tree) {
     pointer = treeButtons(tree).some(b => inRect(p, b.rect)) || (!!tree.hover && !!tree.draft && tree.mode === 'shift');
     canvas.style.cursor = tree.drag?.moved ? 'grabbing' : pointer ? 'pointer' : 'grab';
+  } else if (screen === 'ending') {
+    canvas.style.cursor = inRect(p, ENDING_BUTTON) ? 'pointer' : 'default';
   } else if (screen === 'gacha') {
     canvas.style.cursor = magnetron?.results || inRect(p, PULL1) || inRect(p, PULL10) || inRect(p, MAG_BACK) ? 'pointer' : 'default';
   } else {
@@ -252,6 +260,8 @@ setupInput(canvas, {
       const t = TOGGLES.find(r => inRect(p, r.hit));
       if (t?.id === 'screenShake') { settings.screenShake = fx.shakeOn = !settings.screenShake; saveSettings(settings, localStorage); }
       else if (t?.id === 'fullscreen') toggleFullscreen();
+    } else if (screen === 'ending') {
+      if (endingT > 1.6 && inRect(p, ENDING_BUTTON)) screen = 'run';
     } else if (screen === 'run') {
       if (inRect(p, GEAR_BUTTON)) { screen = 'pause'; return; }
       if (inRect(p, PRESTIGE_BUTTON)) { pressPrestigeButton(); return; }
@@ -294,6 +304,7 @@ setupInput(canvas, {
     if (screen === 'newgame') { if (code === 'Escape') screen = 'title'; return false; }
     if (screen === 'pause') { if (code === 'Escape') screen = 'run'; return false; }
     if (screen === 'settings') { if (code === 'Escape') closeSettings(); return false; }
+    if (screen === 'ending') { if (endingT > 1.6 && (code === 'Enter' || code === 'Escape')) screen = 'run'; return false; }
     if (screen === 'run') {
       if (code === 'Escape') { screen = 'pause'; return true; }
       if (code === 'Space') { pulse(); return true; }
@@ -341,6 +352,7 @@ function frame(now: number): void {
     while (acc >= STEP) { tick(); acc -= STEP; }
   } else acc = 0; // the run is paused while the Core tree is open
   if (magnetron) magnetron.revealT += dt;
+  if (screen === 'ending') endingT += dt;
   if (tree) { for (const f of tree.flashes) f.life -= dt; tree.flashes = tree.flashes.filter(f => f.life > 0); }
   if (screen === 'shift' && (shiftAnim += dt) >= SHIFT_ANIM) finishShift();
   if (cursor) updateCursorStyle(cursor); // also right after a screen change, not only on mouse moves
@@ -349,7 +361,8 @@ function frame(now: number): void {
   ctx.fillRect(0, 0, VIEW.w, VIEW.h);
   const overTitle = screen === 'title' || screen === 'newgame' || (screen === 'settings' && settingsFrom === 'title');
   const overRun = screen === 'pause' || (screen === 'settings' && settingsFrom === 'pause');
-  if (overTitle) {
+  if (screen === 'ending') drawEnding(ctx, st, cursor, endingT);
+  else if (overTitle) {
     const info = { hasRun, savedAgo: savedAt === null ? null : Math.max(0, (Date.now() - savedAt) / 1000), unreadable: loaded.movedToBackup };
     drawTitle(ctx, st, info, screen === 'title' ? cursor : null, uiTime, AUTOSAVE_INTERVAL);
     if (screen === 'newgame') drawNewGameConfirm(ctx, st, cursor);

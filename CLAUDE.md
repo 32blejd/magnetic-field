@@ -9,7 +9,7 @@ Full game outline, numbers, balance and milestones: [docs/DESIGN.md](docs/DESIGN
 - TypeScript (strict) + Vite
 - Everything is drawn on one 2D `<canvas>` (board, HUD, panel) in a 960×540 logical view, scaled to the window
 - Tests: Vitest. Balance simulator: `tsx`
-- Numbers: plain `number` for now. Gameplay arithmetic and comparisons on currency go through `src/game/money.ts` (`costOf`, `earn`, `spend`, `coinValue`, `hasEarned`, `earnedShare`, `goalReward`) and `src/game/shop.ts` (upgrade costs with the Discount node, `buy`, `buyMax`); other code only stores, saves or formats the values. A switch to `break_eternity.js` would touch those two files, the save format, `ui/format.ts` and the income readout in `render/effects.ts`
+- Numbers: plain `number` for now. Gameplay arithmetic and comparisons on currency go through `src/game/money.ts` (`costOf`, `earn`, `spend`, `coinValue`, `hasEarned`, `earnedShare`, `goalReward`, `insurancePayout`) and `src/game/shop.ts` (upgrade costs with the Discount node, `buy`, `buyMax`); other code only stores, saves or formats the values. A switch to `break_eternity.js` would touch those two files, the save format, `ui/format.ts` and the income readout in `render/effects.ts`
 
 ## Commands
 
@@ -25,7 +25,7 @@ npm run sim:m5 -- [shifts=9] [seeds=3]       # impact of each M5 node on a late 
 
 `npm test` goes through `scripts/vitest.mjs`, which upper-cases the drive letter of the working directory first. On Windows a `c:\…` cwd (e.g. a VS Code terminal) makes Vitest load itself twice and every test fails with "Cannot read properties of undefined (reading 'config')". Don't call `vitest` directly.
 
-Debug URL params (dev or preview): `?nosave=1`, `?reset=1`, `?earned=N`, `?cores=N`, `?shifts=N`, `?crystals=N`, `?pulls=N`, `?open=shift|browse|gacha`, `?warm=N`, `?speed=N`, `?rare=1`, `?anti=1`, `?nodes=Nkey:3,Wb2|all` – see `src/debug.ts`. Any of them skips the title screen (without params the game opens on the title screen).
+Debug URL params (dev or preview): `?nosave=1`, `?reset=1`, `?earned=N`, `?cores=N`, `?shifts=N`, `?crystals=N`, `?pulls=N`, `?open=shift|browse|gacha|ending`, `?warm=N`, `?speed=N`, `?rare=1`, `?anti=1`, `?nodes=Nkey:3,Wb2|stage1..3|all` – see `src/debug.ts`. Any of them skips the title screen (without params the game opens on the title screen).
 
 ## Structure
 

@@ -343,6 +343,11 @@ describe('debug ?nodes=', () => {
     expect(parseNodes(null)).toBeNull();
     expect(parseNodes('Nkey:3,Wb2,bogus,core,Ekey:9')).toEqual({ Nkey: 3, Wb2: 1, Ekey: 1 });
     expect(parseNodes('all')!.Wkey).toBe(3);
+    expect(parseNodes('all')!.compass).toBe(1);
+    expect(parseNodes('stage1')!.Wkey).toBe(3);
+    expect(parseNodes('stage1')!.NEb1).toBeUndefined();
+    expect(parseNodes('stage2')!.NEkey).toBe(1);
+    expect(parseNodes('stage2')!.NNEb1).toBeUndefined();
   });
 });
 

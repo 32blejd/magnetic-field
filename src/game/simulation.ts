@@ -6,27 +6,36 @@ import { antiUnlocked, comboMult, comboUnlocked, pulseUnlocked, upgradeUnlockAt 
 import { autoBuy, autoPulse } from './automation';
 import { checkGoals } from './goals';
 import { helperMagnets, helperPulling, touchesHelper, updateDrones } from './helpers';
-import { coinValue, earn, goalReward, hasEarned, interestOn } from './money';
-import { COMBO_SHIELD_COOLDOWN, bonuses, type Bonuses } from './prestige';
+import { coinValue, earn, goalReward, hasEarned, insurancePayout, interestOn } from './money';
+import { COMBO_SHIELD_COOLDOWN, JACKPOT, bonuses, type Bonuses } from './prestige';
 import { rand } from './rng';
 import { getStats, upgradeEffect, type Stats } from './stats';
 import type { Coin, GameEvent, GameState, Vec } from './types';
 
 const GOLD = TIERS.find(t => t.id === 'gold')!;
+const BASIC = TIERS.find(t => t.id === 'basic')!;
+/** Mint: basic coins split off a caught Gold coin. */
+const MINT_COINS = 2;
 /** Meteor Shower: coins in the line and their speed multiplier. */
 const METEOR = { count: 12, speed: 1.6, banner: 2 };
 
-/** Rolls a coin tier. Void (keystone) is rolled first with its own chance; Rarity bonuses only apply to Gold and Prism. */
-export function rollTier(st: GameState, rarityBonus: number, voidCoin: boolean): Tier {
+/** Rolls a coin tier. Void (keystone) is rolled first with its own chance; Rarity bonuses only apply to Gold and Prism,
+    `goldBonus` (Gilding, Golden Age, Golden Streak) only to Gold. */
+export function rollTier(st: GameState, rarityBonus: number, voidCoin: boolean, goldBonus = 0): Tier {
   if (voidCoin && rand(st) < VOID_TIER.chance) return VOID_TIER;
   let x = rand(st);
   for (const t of TIERS) {
-    const chance = t.mult > 1 ? t.chance + rarityBonus : t.chance;
+    const chance = t.mult > 1 ? t.chance + rarityBonus + (t.id === 'gold' ? goldBonus : 0) : t.chance;
     if (x < chance) return t;
     x -= chance;
   }
   return TIERS[TIERS.length - 1]!;
 }
+
+/** Extra Gold chance right now: Gilding/Golden Age always, Golden Streak only while the combo is at its max. */
+const goldBonus = (st: GameState, b: Bonuses): number =>
+  b.goldChance + (b.goldStreak > 0 && comboMult(st.combo, b.comboMax) >= b.comboMax ? b.goldStreak : 0);
+const roll = (st: GameState, S: Stats, b: Bonuses): Tier => rollTier(st, S.rarity, b.voidCoin, goldBonus(st, b));
 
 function makeCoin(st: GameState, x: number, y: number, angle: number, tier: CoinKind): Coin {
   const anti = tier.id === 'anti';
@@ -45,7 +54,7 @@ function spawnRegular(st: GameState, S: Stats, b: Bonuses): void {
     st.warnings.push({ x, y, angle, t: ANTI.warn });
     return;
   }
-  st.coins.push(makeCoin(st, x, y, angle, rollTier(st, S.rarity, b.voidCoin)));
+  st.coins.push(makeCoin(st, x, y, angle, roll(st, S, b)));
 }
 
 function gainCrystal(st: GameState, x: number, y: number, out: GameEvent[], amount = 1): void {
@@ -95,7 +104,7 @@ function spawnMeteorShower(st: GameState, S: Stats, b: Bonuses): void {
       side === 1 ? [BOARD.x + BOARD.w - 14, BOARD.y + BOARD.h * f, Math.PI + jitter] :
       side === 2 ? [BOARD.x + BOARD.w * f, BOARD.y + 14, Math.PI / 2 + jitter] :
                    [BOARD.x + BOARD.w * f, BOARD.y + BOARD.h - 14, -Math.PI / 2 + jitter];
-    const c = makeCoin(st, x, y, angle, rollTier(st, S.rarity, b.voidCoin));
+    const c = makeCoin(st, x, y, angle, roll(st, S, b));
     c.speed *= METEOR.speed;
     st.coins.push(c);
   }
@@ -115,7 +124,7 @@ function updateEvents(st: GameState, S: Stats, b: Bonuses, dt: number, out: Game
     const y = BOARD.y + BOARD.h * (0.3 + rand(st) * 0.4);
     const n = EVENTS.fountain.count, a0 = rand(st) * Math.PI * 2;
     for (let k = 0; k < n; k++) { // ignores capacity; Golden Fountain makes them all Gold
-      const tier = b.goldenFountain ? GOLD : rollTier(st, S.rarity, b.voidCoin);
+      const tier = b.goldenFountain ? GOLD : roll(st, S, b);
       st.coins.push(makeCoin(st, x, y, a0 + (k * Math.PI * 2) / n, tier));
     }
     st.event = { type: 'fountain', t: EVENTS.fountain.banner, total: EVENTS.fountain.banner };
@@ -151,13 +160,23 @@ function collect(st: GameState, S: Stats, b: Bonuses, c: Coin, out: GameEvent[],
     st.comboT = b.comboWindow;
     st.stats.bestCombo = Math.max(st.stats.bestCombo, st.combo);
   }
-  const tierValue = c.tier === 'prism' ? b.prismValue : c.mult; // Prism Resonance: ×4 value (speed stays ×3)
-  const value = coinValue(S.value, tierValue, comboMult(st.combo, b.comboMax));
+  const value = coinValue(S.value, tierValueOf(c, b), comboMult(st.combo, b.comboMax) * (b.jackpot && rand(st) < JACKPOT.chance ? JACKPOT.mult : 1));
   earn(st, value);
   if (c.tier !== 'anti') st.stats.caught[c.tier]++;
   out.push({ type: 'pickup', coin: c, value });
   if (c.tier === 'prism' && rand(st) < CRYSTALS.prismChance + b.crystalFind) gainCrystal(st, c.x, c.y - 20, out);
   if (c.tier === 'prism' && b.chainReaction) chains.push({ x: c.x, y: c.y });
+  if (c.tier === 'gold' && b.mint) { // Mint: two basic coins fly out of the caught Gold coin (ignores capacity)
+    const a0 = rand(st) * Math.PI * 2;
+    for (let k = 0; k < MINT_COINS; k++) st.coins.push(makeCoin(st, c.x, c.y, a0 + (k * Math.PI * 2) / MINT_COINS, BASIC));
+  }
+}
+
+/** Value multiplier of a coin's tier: Prism Resonance (×4) and Trophy (Gold ×2.5/×3) change Prism and Gold. */
+function tierValueOf(c: Coin, b: Bonuses): number {
+  if (c.tier === 'prism') return b.prismValue;
+  if (c.tier === 'gold') return b.goldValue;
+  return c.mult;
 }
 
 /** Chain Reaction: every good coin (past its spawn animation) within CHAIN.radius of a caught Prism is collected too.
@@ -176,8 +195,8 @@ function resolveChains(st: GameState, S: Stats, b: Bonuses, chains: Vec[], out: 
 }
 
 /** Interest: pays a share of the held coins whenever the run clock passes a multiple of INTEREST.every seconds. */
-function payInterest(st: GameState, S: Stats, prevT: number, out: GameEvent[]): void {
-  if (Math.floor(st.t / INTEREST.every) <= Math.floor(prevT / INTEREST.every)) return;
+function payInterest(st: GameState, S: Stats, b: Bonuses, prevT: number, out: GameEvent[]): void {
+  if (Math.floor(st.t / b.interestEvery) <= Math.floor(prevT / b.interestEvery)) return;
   const cap = goalReward(S.value, upgradeEffect(st, 'spawn'), INTEREST.capSeconds); // 10 s of perfect income
   const amount = interestOn(st.money, INTEREST.rate, cap);
   if (amount <= 0) return;
@@ -193,6 +212,17 @@ function pullToward(c: Coin, to: Vec, d: number, range: number, strength: number
   c.x += (to.x - c.x) * k;
   c.y += (to.y - c.y) * k;
 }
+
+/** Polarity: pushes an anti-coin straight away from the magnet at the speed it would have been pulled in. */
+function pushAway(c: Coin, from: Vec, d: number, range: number, strength: number, dt: number): void {
+  if (d <= 0) return;
+  const v = strength * c.pull * (PULL.base + PULL.bonus * (1 - d / range)) * dt;
+  c.x += ((c.x - from.x) / d) * v;
+  c.y += ((c.y - from.y) / d) * v;
+}
+
+/** Pull strength on a coin: rare coins get Predator on top. */
+const strengthFor = (c: Coin, S: Stats, b: Bonuses): number => (c.tier === 'basic' ? S.strength : S.strength * b.rarePull);
 
 const outOfBoard = (c: Coin): boolean =>
   c.x < BOARD.x - COIN_RADIUS || c.x > BOARD.x + BOARD.w + COIN_RADIUS ||
@@ -240,7 +270,7 @@ export function step(st: GameState, dt: number, magnet: Vec | null, out: GameEve
 
   const m = st.stunT > 0 ? null : magnet;
   if (autoPulse(st, b, m, S.baseRange, out)) S = getStats(st); // the field grows this step
-  updateDrones(st, b.drones, dt);
+  updateDrones(st, b.drones, dt, b.droneSpeedMult);
   const helpers = helperMagnets(st, m, S, b);
   const chains: Vec[] = [];
   for (let i = st.coins.length - 1; i >= 0; i--) {
@@ -259,8 +289,9 @@ export function step(st: GameState, dt: number, magnet: Vec | null, out: GameEve
       if (d > TOUCH_DISTANCE && !helperTouch) { // move only if not touching yet (also avoids 0/0 when d = 0)
         const R = c.anti ? S.baseRange : S.range; // Pulse doesn't pull anti-coins
         const helper = (m && d < R) || c.anti ? null : helperPulling(helpers, c);
-        if (m && d < R) pullToward(c, m, d, R, c.anti ? S.antiStrength : S.strength, dt); // nor does Strength
-        else if (helper) pullToward(c, helper.h, helper.d, helper.h.range, S.strength, dt);
+        if (m && d < R && c.anti && b.polarity) pushAway(c, m, d, R, S.antiStrength, dt);
+        else if (m && d < R) pullToward(c, m, d, R, c.anti ? S.antiStrength : strengthFor(c, S, b), dt); // nor does Strength
+        else if (helper) pullToward(c, helper.h, helper.d, helper.h.range, strengthFor(c, S, b), dt);
         else {
           if (m && c.tier === 'prism' && b.homingPrisms) steerToward(c, m, dt);
           c.x += c.dx * drift;
@@ -277,11 +308,19 @@ export function step(st: GameState, dt: number, magnet: Vec | null, out: GameEve
     }
     if (outOfBoard(c)) {
       st.coins.splice(i, 1);
-      if (!c.anti) { st.stats.missed++; out.push({ type: 'miss', coin: c }); }
+      if (!c.anti) {
+        st.stats.missed++;
+        out.push({ type: 'miss', coin: c });
+        if (b.insurance > 0) earn(st, insurancePayout(coinValue(S.value, tierValueOf(c, b), 1), b.insurance));
+      } else if (b.polarity) { // Polarity bounty: an anti-coin pushed off the board pays like a Prism
+        const value = coinValue(S.value, b.prismValue, 1);
+        earn(st, value);
+        out.push({ type: 'pickup', coin: c, value });
+      }
     }
   }
   resolveChains(st, S, b, chains, out);
-  if (b.interest) payInterest(st, S, prevT, out);
+  if (b.interest) payInterest(st, S, b, prevT, out);
 
   checkGoals(st, out);
   return out;

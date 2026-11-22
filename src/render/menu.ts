@@ -2,14 +2,16 @@
 import { VIEW } from '../data/tuning';
 import type { GameState, Vec } from '../game/types';
 import type { Settings } from '../save/settings';
+import { LODESTONES } from '../data/lodestones';
+import { bonuses } from '../game/prestige';
 import { formatNumber, formatShort, formatTime } from '../ui/format';
 import { inRect, PANEL, type Rect } from '../ui/layout';
 import {
-  GEAR_BUTTON, NEWGAME_BOX, NEWGAME_CANCEL, NEWGAME_ERASE, PAUSE_BOX, PAUSE_BUTTONS, SETTINGS_BACK, SETTINGS_BOX, SETTINGS_LABEL_X,
+  ENDING_BUTTON, GEAR_BUTTON, NEWGAME_BOX, NEWGAME_CANCEL, NEWGAME_ERASE, PAUSE_BOX, PAUSE_BUTTONS, SETTINGS_BACK, SETTINGS_BOX, SETTINGS_LABEL_X,
   SLIDERS, TOGGLES, sliderHit, titleButtons,
 } from '../ui/menuLayout';
 import { MENU } from '../ui/strings';
-import { glow, hexPath, noGlow, type Ctx } from './draw';
+import { glow, hexPath, noGlow, starPath, type Ctx } from './draw';
 import { COLORS, FONT } from './theme';
 
 interface TextOpts { size?: number; weight?: number; color?: string; align?: CanvasTextAlign }
@@ -64,6 +66,7 @@ function fieldBackdrop(ctx: Ctx, t: number): void {
 /** One line describing the run: shift count and Cores after the first shift, else run time and coins. */
 function runSummary(st: GameState): string {
   const time = formatTime(st.t);
+  if (bonuses(st.meta).compassBroken) return MENU.endlessSummary(formatNumber(st.meta.shifts), time);
   return st.meta.shifts > 0
     ? MENU.shiftSummary(formatNumber(st.meta.shifts), formatNumber(st.meta.coresEarned), time)
     : MENU.firstRunSummary(time, formatShort(st.totalEarned));
@@ -188,4 +191,33 @@ export function drawSettings(ctx: Ctx, s: Settings, fullscreen: boolean, cursor:
     else toggle(ctx, MENU.fullscreen, y, knob, fullscreen, MENU.fullscreenNote, hover);
   }
   button(ctx, SETTINGS_BACK, MENU.back, { hover: hov(cursor, SETTINGS_BACK), key: MENU.escKey });
+}
+
+/** The ending: a star bursts out of a cracked compass rose, the thank-you text and stats fade in, then PLAY ON starts endless. */
+export function drawEnding(ctx: Ctx, st: GameState, cursor: Vec | null, t: number): void {
+  const { w: W, h: H } = VIEW, cx = W / 2, cy = 150, gold = '#ffd76a';
+  ctx.fillStyle = COLORS.bg; ctx.fillRect(0, 0, W, H);
+  const k = Math.min(1, t / 1.5); // intro
+  for (let i = 0; i < 16; i++) { // the rose, its points flying apart
+    const a = (i * Math.PI) / 8 - Math.PI / 2, card = i % 4 === 0, len = (card ? 120 : i % 2 === 0 ? 90 : 65) * (0.6 + 0.4 * k);
+    const off = 18 * k + 4 * Math.sin(t * 1.5 + i), wdt = card ? 9 : 6;
+    const bx = cx + Math.cos(a) * off, by = cy + Math.sin(a) * off * 0.85, tip = { x: bx + Math.cos(a) * len, y: by + Math.sin(a) * len * 0.85 };
+    const g = ctx.createLinearGradient(bx, by, tip.x, tip.y);
+    g.addColorStop(0, 'rgba(185,140,255,.05)'); g.addColorStop(1, card ? 'rgba(255,215,106,.7)' : 'rgba(185,140,255,.45)');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(tip.x, tip.y);
+    ctx.lineTo(bx - Math.sin(a) * wdt, by + Math.cos(a) * wdt); ctx.lineTo(bx + Math.sin(a) * wdt, by - Math.cos(a) * wdt); ctx.closePath(); ctx.fill();
+  }
+  const pulse = 0.5 + 0.5 * Math.sin(t * 2.5);
+  glow(ctx, gold, 26 + pulse * 14); ctx.fillStyle = gold; starPath(ctx, cx, cy, 24 + 8 * k, 10 + 3 * k, 5, -Math.PI / 2 + t * 0.2); ctx.fill(); noGlow(ctx);
+
+  ctx.globalAlpha = Math.min(1, Math.max(0, (t - 0.6) / 1));
+  text(ctx, MENU.endTitle, cx, 290, { size: 14, weight: 700, color: COLORS.core, align: 'center' });
+  glow(ctx, gold, 22); text(ctx, MENU.endThanks, cx, 328, { size: 34, weight: 700, color: gold, align: 'center' }); noGlow(ctx);
+  const stones = LODESTONES.filter(l => (st.meta.lodestones[l.id] ?? 0) > 0).length;
+  text(ctx, MENU.endStats(formatNumber(st.meta.shifts), formatNumber(st.meta.coresEarned), formatNumber(stones)), cx, 368, { size: 12, color: COLORS.text, align: 'center' });
+  text(ctx, MENU.endEndless, cx, 392, { size: 11, color: COLORS.sub, align: 'center' });
+  text(ctx, MENU.endCredits, cx, 414, { size: 10, color: 'rgba(95,155,179,.7)', align: 'center' });
+  ctx.globalAlpha = Math.min(1, Math.max(0, (t - 1.6) / 0.6));
+  button(ctx, ENDING_BUTTON, MENU.endPlayOn, { primary: true, hover: hov(cursor, ENDING_BUTTON), key: MENU.enterKey });
+  ctx.globalAlpha = 1;
 }
