@@ -1,4 +1,5 @@
 /* Small canvas helpers shared by the renderers. */
+import { COLORS, FONT } from './theme';
 
 export type Ctx = CanvasRenderingContext2D;
 
@@ -7,6 +8,14 @@ export function glow(ctx: Ctx, color: string, blur: number): void {
   ctx.shadowBlur = blur;
 }
 export const noGlow = (ctx: Ctx): void => { ctx.shadowBlur = 0; };
+
+export interface TextOpts { size?: number; weight?: number; color?: string; align?: CanvasTextAlign }
+/** One line of text, vertically centred on y; restores the default alignment afterwards. */
+export function drawText(ctx: Ctx, s: string, x: number, y: number, { size = 12, weight = 400, color = COLORS.text, align = 'left' }: TextOpts = {}): void {
+  ctx.font = `${weight} ${size}px ${FONT}`; ctx.fillStyle = color; ctx.textAlign = align; ctx.textBaseline = 'middle';
+  ctx.fillText(s, x, y);
+  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+}
 
 export const clamp = (v: number, lo: number, hi: number): number => Math.min(Math.max(v, lo), hi);
 

@@ -50,11 +50,11 @@ The target feeling: every upgrade is **visible on screen** (bigger field, more c
   | Combo | 5,000 |
   | Anti-coins appear | 25,000 (warning banner) |
 
-- **Events** – first at 2:00, then every 2–3 min, 50/50:
+- **Events** – first at 2:00, then every 2–3 min (Storm Front makes them more frequent), picked at random – 50/50, or a third each once the Meteor Shower node adds its event:
   - **Coin Burst** – 6 s of ×3 spawn rate and ×2 capacity; grid and board frame turn amber.
   - **Fountain** – 14 coins burst out of one point in a ring (ignores capacity).
 - **Pulse** (active ability) – SPACE or right click: ×3 range for 1 s, 25 s cooldown. Widget in the bottom-left of the board shows ready / cooldown / locked hint.
-- **Anti-coins** – touching one short-circuits the magnet: it turns off for **1.5 s** (flickering red, `OFFLINE` countdown) and the combo resets. The board shakes. Every anti-coin is **telegraphed for 1 s** before it appears: a red crosshair at the spawn point with two rings closing in, a growing red glow and a blinking `!` that speeds up. Pulse's extra range doesn't apply to them, and they are always pulled with the level-0 Strength (0.50×), so upgrading Strength never drags them in harder. They drift very slowly (×0.2), are only weakly pulled, and **disappear on their own after 5 s** (fading and shrinking over the last 0.8 s; still dangerous until gone), so they act as temporary obstacles a careful player steers around.
+- **Anti-coins** – touching one short-circuits the magnet: it turns off for **1.5 s** (flickering red, `OFFLINE` countdown) and the combo resets. The board shakes (Settings → Screen shake). With the Polarity keystone the field pushes them away instead. Every anti-coin is **telegraphed for 1 s** before it appears: a red crosshair at the spawn point with two rings closing in, a growing red glow and a blinking `!` that speeds up. Pulse's extra range doesn't apply to them, and they are always pulled with the level-0 Strength (0.50×), so upgrading Strength never drags them in harder. They drift very slowly (×0.2), are only weakly pulled, and **disappear on their own after 5 s** (fading and shrinking over the last 0.8 s; still dangerous until gone), so they act as temporary obstacles a careful player steers around.
 - **Run stats** – on the Stats screen (`Tab` or pause menu → STATS), not on the board: run time, earned / goal, income, catch %, coins by tier, missed, best combo, anti-coin hits, events.
 - **Mini-goals** – short-term in-run goals that pay an **instant cash boost**: `rewardSeconds × value per coin × spawn rate` ("N seconds of perfect income", from upgrade levels, so events don't inflate it). Completing one shows a `GOAL COMPLETE · +X` banner and a gold `+X` pop next to the wallet. Progress on every goal is on the Stats screen (the board only shows the completion banner). Goals reset with Polarity Shift.
 
@@ -74,9 +74,10 @@ The target feeling: every upgrade is **visible on screen** (bigger field, more c
 ## Layout
 
 - Board ≈ 73% of the screen width on the left (≈ 1400 px wide on 1920×1080).
-- Below the board only: a **prestige bar** (≈ 100 px tall on 1080p), reserved for Polarity Shift progress.
+- Below the board only: the **prestige bar** (≈ 100 px tall on 1080p): progress to the run goal, Core tree / SHIFT POLARITY button, Auto-shift toggle.
 - Upgrade panel on the right, full height. Exactly 7 rows fit.
 - **Keyboard:** keys 1–7 (top row or numpad) buy the upgrade in that panel row, so the player can keep the cursor on the board. Each row shows its key next to the level (`Lv 3/20  [2]`).
+- **All controls:** mouse = magnet / buttons · `1–7` buy (Shift = buy max with Bulk Buy) · `Space` / right click = Pulse · `T` Core tree preview · `P` Shift Polarity · `G` Magnetron · `A` Auto-shift target · `B` pause the Auto-buyer · `Tab` Stats · `Esc` pause menu / back · `Enter` confirm · `F11` fullscreen. In the Core tree: drag to pan, scroll to zoom, click buy, right click refund.
 
 ### Menus (mockup: [mockups/menu.html](mockups/menu.html))
 
@@ -186,7 +187,7 @@ Later runs (bot; after each shift it spends Cores on the cheapest purchasable no
 | 12 | 17.5M | 110 | 2:14 | 1:52 | 1:42 |
 | 15 | 22M | 140 | 1:27 | 1:23 | 1:13 |
 
-The greedy bot buys the cheapest nodes first, so it reaches M5 nodes very late (only Chain Reaction, from run 13) – the table is mostly the non-M5 tree. Runs drop under 3 min from run 9–10 even without M5 nodes: **late-run balance is the next roadmap item.** An exponential goal (×2–3 per shift) was tried and rejected: in-run income has a ceiling (upgrade caps), so from run 5 the goal took hours. Goal step 1.5 (instead of 1) compensates for Lodestones.
+The greedy bot buys the cheapest nodes first, so it reaches M5 nodes very late (only Chain Reaction, from run 13) – the table is mostly the non-M5 tree. Runs drop under 3 min from run 9–10 even without M5 nodes and to under a minute by the end of stage 1; from stage 2 the stage goal multipliers make runs long again (see *Whole game*). Balancing the end of stage 1 is still open. An exponential goal (×2–3 per shift) was tried and rejected: in-run income has a ceiling (upgrade caps), so from run 5 the goal took hours. Goal step 1.5 (instead of 1) compensates for Lodestones.
 
 **M5 node impact** (`npm run sim:m5 -- [shifts=9] [seeds=3]`): the same run 10 (goal 14.5M, greedy tree from 9 shifts) played by the average bot with one M5 node added, and an idle run with nobody touching the mouse:
 
@@ -301,14 +302,14 @@ Changed from the first plan: no Shards layer (Cores all the way); the right-clic
 
 ### Prestige – "Polarity Shift" (UI mockup: [mockups/polarity-shift.html](mockups/polarity-shift.html))
 
-Requirement: **earn the run goal = 1M × (1 + 1.5 × shifts) × stage multiplier** – 1M, 2.5M, 4M, 5.5M, … in stage 1. The multiplier is ×1 / ×3.5 / ×7.5 / ×10 while stage 1 / 2 / 3 / 4 is the highest open stage, and ×300 in endless (`PRESTIGE.stageGoal`, `endlessGoal`); the confirm dialog shows the next goal including a stage opened by the draft. Reward: **Cores** = `floor(10 × √(earned this run ÷ goal))` – about 10 at the goal of any run, 14 at 2× the goal, 20 at 4×, so playing on pays off with diminishing returns (e.g. a planned longer grind for extra Cores).
+Requirement: **earn the run goal = 1M × (1 + 1.5 × shifts) × stage multiplier** – 1M, 2.5M, 4M, 5.5M, … in stage 1. The multiplier is ×1 / ×3.5 / ×7.5 / ×10 while stage 1 / 2 / 3 / 4 is the highest open stage, and ×300 in endless (`PRESTIGE.stageGoal`, `endlessGoal`); the confirm dialog shows the next goal including a stage opened by the draft. Reward: **Cores** = `floor(10 × √(earned this run ÷ goal) × Core Yield)` (Core Yield = 1 + 0.2 per level of its node) – about 10 at the goal of any run without Core Yield, 14 at 2× the goal, 20 at 4×, so playing on pays off with diminishing returns (e.g. a planned longer grind for extra Cores).
 
 **Flow**
 
 1. **From 100k earned** a `◆ CORE TREE [T]` button appears in the prestige bar: the tree can be **browsed** (read-only preview) mid-run.
 2. **At 1M** the bar glows and shows `SHIFT POLARITY [P]` with the Cores you'd get now and the earnings needed for one more (`+1 ◆ at 1.21M`) – a Core hint, not the next run's goal.
 3. Shift opens the **Core tree** with this run's Cores added. The player places them; choices are **tentative** (UNDO / NOT YET revert them).
-   **Respec is free at every shift:** right-click an owned node to refund one level (only if no owned node would lose its last owned parent – leaves first), or `RESET TREE` to refund the whole tree. Refunds go into the same draft, so UNDO brings the saved tree back and nothing is final until the confirm; the confirm dialog shows `Refunded X ◆ · spent Y ◆ …`.
+   **Respec is free at every shift:** right-click an owned node to refund one level (only if no owned node would lose its last owned parent – leaves first – and not the last level of a maxed node while a later stage is in use), or `RESET TREE` to refund the whole tree. Once Break the Compass is owned the tree is locked. Refunds go into the same draft, so UNDO brings the saved tree back and nothing is final until the confirm; the confirm dialog shows `Refunded X ◆ · spent Y ◆ …`.
 4. `SHIFT & START RUN` shows a **confirm dialog over the tree**: Cores earned, spent and saved, what resets (coins, upgrade levels, unlocks, mini-goals, run stats) and what's kept (Cores, Core tree, lifetime stats, settings), and the **next run's goal** (`NEXT RUN GOAL: EARN 2.5M`).
 5. Confirm → "polarity flip" animation from the Core → a new run starts; its banner repeats the new goal (so does the Auto-shift banner).
 
@@ -399,7 +400,7 @@ Work on `npm run dev` / `npm run preview`: `?nosave=1` don't load/write the save
 
 - Final drift/pull speeds and spawn positions.
 - Prism coins (×3 speed) cross half the board in ~0.6 s – check in playtesting whether they're catchable or just frustrating.
-- Combo stays at ×2 for most of the mid/late game for a good player – maybe raise the cap via upgrades or prestige.
+- Combo sits at its cap for most of the mid/late game for a good player; the cap rises only through Combo Limit (×2.5) and Combo Limit II (×3) – enough?
 - Miss sparks at the board edge may get noisy late game (many misses per second).
 - Drones are very strong for idle play: 3 Drones + Auto-buyer earn ~84% of an active player's income with nobody at the mouse. Fine for "the game plays itself", or tune down (e.g. Drone speed 140 → 100 px/s or field 45% → 35%) so active play stays clearly better? Needs a target.
 - Endless mode: Cores have nothing left to buy after the ending – best-time records (per run? time to goal?) or another sink?

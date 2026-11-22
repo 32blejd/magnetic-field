@@ -11,15 +11,10 @@ import {
   SLIDERS, TOGGLES, sliderHit, titleButtons,
 } from '../ui/menuLayout';
 import { MENU } from '../ui/strings';
-import { glow, hexPath, noGlow, starPath, type Ctx } from './draw';
-import { COLORS, FONT } from './theme';
+import { drawText, glow, hexPath, noGlow, starPath, type Ctx } from './draw';
+import { COLORS } from './theme';
 
-interface TextOpts { size?: number; weight?: number; color?: string; align?: CanvasTextAlign }
-function text(ctx: Ctx, s: string, x: number, y: number, { size = 12, weight = 400, color = COLORS.text, align = 'left' }: TextOpts = {}): void {
-  ctx.font = `${weight} ${size}px ${FONT}`; ctx.fillStyle = color; ctx.textAlign = align; ctx.textBaseline = 'middle';
-  ctx.fillText(s, x, y);
-  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
-}
+const text = drawText;
 
 function box(ctx: Ctx, r: Rect, stroke: string, blur = 20): void {
   glow(ctx, stroke, blur); ctx.fillStyle = COLORS.panel; ctx.beginPath(); ctx.roundRect(r.x, r.y, r.w, r.h, 12); ctx.fill();

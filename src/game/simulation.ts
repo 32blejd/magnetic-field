@@ -252,7 +252,7 @@ function steerToward(c: Coin, m: Vec, dt: number): void {
  * @param out receives everything that happened (pickups, unlocks, goals…)
  */
 export function step(st: GameState, dt: number, magnet: Vec | null, out: GameEvent[] = []): GameEvent[] {
-  const prevT = st.t, earnedBefore = st.totalEarned;
+  const prevT = st.t, goalBefore = hasEarned(st, shiftGoal(st.meta));
   st.t += dt;
   st.meta.life.time += dt;
   st.spawnT -= dt;
@@ -332,12 +332,12 @@ export function step(st: GameState, dt: number, magnet: Vec | null, out: GameEve
   if (b.interest) payInterest(st, S, b, prevT, out);
 
   checkGoals(st, out);
-  recordFastest(st, earnedBefore);
+  recordFastest(st, goalBefore);
   return out;
 }
 
 /** Lifetime "fastest run to goal": the run time at the step where this run's goal was first reached. */
-function recordFastest(st: GameState, earnedBefore: number): void {
-  const goal = shiftGoal(st.meta), life = st.meta.life;
-  if (earnedBefore < goal && st.totalEarned >= goal && (life.fastest === 0 || st.t < life.fastest)) life.fastest = st.t;
+function recordFastest(st: GameState, goalBefore: boolean): void {
+  const life = st.meta.life;
+  if (!goalBefore && hasEarned(st, shiftGoal(st.meta)) && (life.fastest === 0 || st.t < life.fastest)) life.fastest = st.t;
 }

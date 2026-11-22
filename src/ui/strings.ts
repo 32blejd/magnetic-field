@@ -161,7 +161,6 @@ export const S = {
   fountain: { title: 'FOUNTAIN', sub: 'Grab them while you can!' },
   goalComplete: (reward: string) => `GOAL COMPLETE · +${reward}`,
   goalText: (g: GoalDef) => `Catch ${formatNumber(g.target)} ${GOAL_NOUN[g.metric][g.target === 1 ? 0 : 1]}`,
-  goalLabel: { coins: 'COINS', gold: 'GOLD', prism: 'PRISM', anti: 'ANTI' } as Record<GoalMetric, string>,
   shortCircuit: 'SHORT CIRCUIT',
 
   pulseLocked: (n: string) => `PULSE · earn ${n}`,

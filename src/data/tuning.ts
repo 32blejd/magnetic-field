@@ -47,9 +47,6 @@ export const EVENTS = {
   fountain: { count: 14, banner: 2 },
 } as const;
 
-/** Earn this much in one run to unlock Polarity Shift. */
-export const PRESTIGE_GOAL = 1_000_000;
-
 /* ---------- M5: keystones and automation from the Core tree ---------- */
 
 /** Satellites (N keystone): small magnets orbiting the cursor, one per level. Sizes are fractions of the field radius without Pulse. */

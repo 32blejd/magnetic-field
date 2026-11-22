@@ -12,7 +12,6 @@ export interface Settings {
   screenShake: boolean;
 }
 export type VolumeId = 'master' | 'music' | 'effects';
-export const VOLUME_IDS: readonly VolumeId[] = ['master', 'music', 'effects'];
 
 export const defaultSettings = (): Settings => ({ master: 0.8, music: 0.6, effects: 0.8, screenShake: true });
 

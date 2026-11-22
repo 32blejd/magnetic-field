@@ -1,6 +1,6 @@
 # Magnetic Field
 
-An incremental game built around a single active mechanic: the player steers a magnet with the cursor across a board and pulls in coins. Upgrades modify the parameters of that mechanic (range, strength, value, spawn rate…); automation and prestige come later.
+An incremental game built around a single active mechanic: the player steers a magnet with the cursor across a board and pulls in coins. Upgrades modify the parameters of that mechanic (range, strength, value, spawn rate…); a prestige layer (Polarity Shift → Cores → Core tree), a gacha (Magnetron → Lodestones) and automation build on top, up to an ending (Break the Compass) and endless mode.
 
 Full game outline, numbers, balance and milestones: [docs/DESIGN.md](docs/DESIGN.md). Before adding a new mechanic, check that it is in scope for the current milestone, and keep DESIGN.md in sync with any tuning change.
 
@@ -9,7 +9,7 @@ Full game outline, numbers, balance and milestones: [docs/DESIGN.md](docs/DESIGN
 - TypeScript (strict) + Vite
 - Everything is drawn on one 2D `<canvas>` (board, HUD, panel) in a 960×540 logical view, scaled to the window
 - Tests: Vitest. Balance simulator: `tsx`
-- Numbers: plain `number` for now. Gameplay arithmetic and comparisons on currency go through `src/game/money.ts` (`costOf`, `earn`, `spend`, `coinValue`, `hasEarned`, `earnedShare`, `goalReward`, `insurancePayout`) and `src/game/shop.ts` (upgrade costs with the Discount node, `buy`, `buyMax`); other code only stores, saves or formats the values. A switch to `break_eternity.js` would touch those two files, the save format, `ui/format.ts` and the income readout in `render/effects.ts`
+- Numbers: plain `number` for now. Gameplay arithmetic and comparisons on currency go through `src/game/money.ts` (`costOf`, `discounted`, `canAfford`, `earn`, `spend`, `coinValue`, `hasEarned`, `earnedRatio`, `earnedShare`, `goalReward`, `interestOn`, `insurancePayout`) and `src/game/shop.ts` (upgrade costs with the Discount node, `buy`, `buyMax`); other code only stores, saves or formats the values. A switch to `break_eternity.js` would touch those two files, the save format, `ui/format.ts` and the income readout in `render/effects.ts`
 
 ## Commands
 
@@ -33,16 +33,17 @@ Debug URL params (dev or preview): `?nosave=1`, `?reset=1`, `?earned=N`, `?cores
 
 ```
 src/
-  data/      # tuning constants, upgrades, coin tiers, goals – pure data, no logic
-  game/      # state, simulation step, derived stats, money, abilities, goals – pure logic
+  data/      # tuning constants, upgrades, coin tiers, goals, Core tree (prestige.ts), Lodestones – pure data, no logic
+  game/      # state, simulation step, derived stats, money, shop, abilities, goals, prestige (Core tree, shifts), lodestones,
+             # helpers (Satellites, Drones, Twin Magnet), automation – pure logic
   save/      # save/load, versioning, migrations; settings.ts (player settings, own key)
-  render/    # canvas drawing (board, HUD, panel, prestige bar, menus) and visual-only effects
+  render/    # canvas drawing (board, HUD, panel, prestige bar, Core tree, Magnetron, menus, Stats, ending) and visual-only effects
   audio/     # sound effects: cues.ts (events → sounds, pure) and synth.ts (Web Audio recipes); soundboard.ts for sounds.html
   ui/        # layout rects, input, number formatting, all UI strings
   debug.ts   # debug URL params
   main.ts    # wires everything together, game loop
-scripts/     # bot + balance simulator, Vitest launcher
-tests/       # Vitest tests (formulas, simulation, goals, save, ui formatting/currency helpers, balance)
+scripts/     # bot + balance simulator (balance-sim.ts, m5-impact.ts), Vitest launcher
+tests/       # Vitest tests (formulas, simulation, goals, Core tree and endgame, Lodestones, M5, save, stats, menus, sound cues, ui helpers, balance)
 docs/        # DESIGN.md – game design, numbers, balance tables; docs/mockups/ – standalone UI mockups (look & flow only, not the source of any numbers)
 ```
 
@@ -52,8 +53,8 @@ docs/        # DESIGN.md – game design, numbers, balance tables; docs/mockups/
 - **Fixed simulation step.** `step(state, STEP, magnet, events)` runs at 1/60 s with an accumulator; rendering via `requestAnimationFrame` only draws. Never tie logic to frame rate.
 - **Events out, not callbacks.** `step` pushes `GameEvent`s (pickup, miss, unlock, goal…); `render/effects.ts` turns them into particles, banners etc., `audio/cues.ts` into sounds. Visual and audio state never feeds back into the game.
 - **Single source of truth.** `GameState` holds primary data; magnet parameters are derived by `getStats(state)` – never store them.
-- **Data-driven upgrades.** A new upgrade = an entry in `src/data/upgrades.ts` + its text in `ui/strings.ts` + its format in `ui/format.ts`. Effects are written in terms of `level / max` so caps can change without changing the value at max.
-- **Upgrade cost:** `round(base × growth^level × steepExtra)` in `game/money.ts`, covered by tests.
+- **Data-driven upgrades.** A new upgrade = an entry in `src/data/upgrades.ts` + its text in `ui/strings.ts` + its format in `ui/format.ts`. Effects are written in terms of `level / max` so caps can change without changing the value at max; levels above the cap (Break the Compass) add the entry's `over` per level – read effects with `effectAt()`, caps with `levelCap()`.
+- **Upgrade cost:** `round(base × growth^level × steepExtra)` in `game/money.ts`, levels above the cap ×`OVERCAP_GROWTH` per level, covered by tests.
 - **Deterministic RNG.** All game randomness goes through `rand(state)` (state-held seed). `Math.random` is only allowed for visual and audio effects and for picking the seed of a new run (`main.ts`).
 - **Transient objects** (coins, warnings, drones, timers, effects) are not saved.
 
@@ -68,6 +69,6 @@ docs/        # DESIGN.md – game design, numbers, balance tables; docs/mockups/
 ## Conventions
 
 - Everything in English: code, comments, docs and UI text. All player-facing strings live in `src/ui/strings.ts`.
-- Small pure functions in `game/`; side effects (DOM, localStorage, time) only in `main.ts`/`ui/input.ts`.
+- Small pure functions in `game/`; side effects (DOM, localStorage, time) only in `main.ts`/`ui/input.ts`, and the AudioContext only in `audio/synth.ts`.
 - Counts and amounts shown to the player always go through `formatNumber`/`formatShort` before reaching a string in `ui/strings.ts`; seconds, percentages and multipliers use fixed precision (`toFixed`/`Math.round`).
 - After logic or tuning changes run `npm test` (includes a balance guard: average bot reaches 1M in the first run in 12–16 min, target 14) and, for tuning, `npm run sim` at 250/400/600 and update DESIGN.md. After UI changes check the game in `npm run dev`.

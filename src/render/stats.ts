@@ -8,15 +8,13 @@ import type { GameState } from '../game/types';
 import { formatDuration, formatNumber, formatShort, formatTime } from '../ui/format';
 import { STATS_BOX } from '../ui/menuLayout';
 import { STATS_TEXT as T } from '../ui/strings';
-import { glow, noGlow, type Ctx } from './draw';
+import { drawText, glow, noGlow, type Ctx } from './draw';
 import type { Effects } from './effects';
-import { COLORS, FONT, tierColor } from './theme';
+import { COLORS, tierColor } from './theme';
 
-function text(ctx: Ctx, s: string, x: number, y: number, size: number, color: string, weight = 400, align: CanvasTextAlign = 'left'): void {
-  ctx.font = `${weight} ${size}px ${FONT}`; ctx.fillStyle = color; ctx.textAlign = align; ctx.textBaseline = 'middle';
-  ctx.fillText(s, x, y);
-  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
-}
+/** Positional shorthand for drawText. */
+const text = (ctx: Ctx, s: string, x: number, y: number, size: number, color: string, weight = 400, align: CanvasTextAlign = 'left'): void =>
+  drawText(ctx, s, x, y, { size, color, weight, align });
 
 /** Column heading with an underline in its color. */
 function heading(ctx: Ctx, x: number, y: number, w: number, title: string, color: string): void {

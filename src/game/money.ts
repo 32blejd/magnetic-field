@@ -43,5 +43,8 @@ export const coinValue = (perCoin: number, tierMult: number, comboMultiplier: nu
 /** Whether at least `amount` has been earned this run (unlock thresholds). */
 export const hasEarned = (st: GameState, amount: number): boolean => st.totalEarned >= amount;
 
+/** Earned this run ÷ `goal`, not capped (Core reward). */
+export const earnedRatio = (st: GameState, goal: number): number => st.totalEarned / goal;
+
 /** Share of `goal` earned this run, 0–1. */
 export const earnedShare = (st: GameState, goal: number): number => Math.min(1, st.totalEarned / goal);

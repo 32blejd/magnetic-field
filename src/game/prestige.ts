@@ -3,7 +3,7 @@ import { CRYSTALS, ELEMENTS, GACHA, LODESTONES } from '../data/lodestones';
 import { AUTO_SHIFT_TARGETS, BREAK_COMPASS, NODE_BY_ID, NODES, PRESTIGE, STAGE_NODES, parentsOf, type NodeDef, type Stage } from '../data/prestige';
 import { ANTI, AUTO, COMBO, INTEREST, PULSE } from '../data/tuning';
 import { UPGRADES } from '../data/upgrades';
-import { hasEarned } from './money';
+import { earnedRatio, hasEarned } from './money';
 import { createState, emptyMeta } from './state';
 import type { GameState, MetaState } from './types';
 
@@ -238,7 +238,7 @@ export const treeUnlocked = (st: GameState): boolean => st.meta.shifts > 0 || ha
 /** Cores a shift would give right now (0 before the goal). */
 export function coresFor(st: GameState): number {
   if (!canShift(st)) return 0;
-  return Math.floor(PRESTIGE.coreBase * Math.sqrt(st.totalEarned / shiftGoal(st.meta)) * bonuses(st.meta).coreYieldMult);
+  return Math.floor(PRESTIGE.coreBase * Math.sqrt(earnedRatio(st, shiftGoal(st.meta))) * bonuses(st.meta).coreYieldMult);
 }
 
 /** Earned this run needed for one more Core. */
