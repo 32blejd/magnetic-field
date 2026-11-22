@@ -2,6 +2,8 @@
 
 A neon incremental browser game about one simple, active mechanic: **your cursor is a magnet**. Coins pop up on the board and drift toward the edges. Pull them in before they escape, spend what you collect on upgrades to the magnet itself, and grow from catching a coin here and there to a board that plays itself – then break the compass.
 
+**Play it in the browser: https://32blejd.github.io/magnetic-field/**
+
 ## How to play
 
 - **Move the mouse over the board.** Coins inside the magnetic field get pulled in and collected; every coin that leaves the board is lost.
@@ -13,6 +15,7 @@ A neon incremental browser game about one simple, active mechanic: **your cursor
 - **Earn the run goal (1,000,000 coins at first) to Shift Polarity**: the run restarts and you get **Cores** to spend in the **Core tree** – bonuses, new coin types, helper magnets and automation.
 - After the first shift, spend **Charge Crystals** in the **Magnetron** to collect 16 **Lodestones** (permanent coin-value bonuses).
 - The Core tree grows from a 4-point compass into an 8- and a 16-point rose. Max it all and buy **Break the Compass** to see the ending – then keep playing in **endless** mode.
+- Short tips guide you through the first runs (they can be turned off in Settings).
 
 ### Controls
 

@@ -219,9 +219,13 @@ export function bonuses(meta: MetaState): Bonuses {
       case 'core': break;
     }
   }
+  if (b.compassBroken) b.valueMult *= 1 + endlessCoreBonus(meta); // endless: every unspent Core adds coin value
   applyLodestones(meta, b);
   return b;
 }
+
+/** Endless (after Break the Compass): coin value bonus from unspent Cores, e.g. 0.42 = +42%. */
+export const endlessCoreBonus = (meta: MetaState): number => BREAK_COMPASS.heldCoreValue * meta.cores;
 
 /** Compound: +1% coin value per minute of the run, up to +30% (Compound II: +2% per minute, up to +100%). */
 export const compoundMult = (st: GameState, b: Bonuses): number =>

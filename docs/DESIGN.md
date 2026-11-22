@@ -88,7 +88,8 @@ The target feeling: every upgrade is **visible on screen** (bigger field, more c
   - **This run**: run time, earned / goal, income now, catch rate, coins caught (basic / Gold / Prism / Void), missed, best combo, anti-coin hits, events.
   - **Mini-goals**: all 12 goals by category – ✓ done, ▸ current with a progress bar, later ones greyed, reward in seconds of perfect income (incl. Bulk Order / Nickel bonuses); `N of 12 done`.
   - **Lifetime** (`meta.life`, save v6, kept across shifts): play time, coins earned, coins caught by tier, best combo ever, Polarity Shifts, fastest run to goal, Cores earned, mini-goals done, Lodestone pulls, anti-coins dodged (vanished or pushed off without touching the magnet). Saves older than v6 start these at zero.
-- **Settings** (from the title or the pause menu, `Esc` = back): master / effects volume sliders (live – effects play at master × effects), a music slider (placeholder until there is music, but saved), Screen shake toggle (anti-coin hits), Fullscreen toggle (also `F11`; follows the browser state, not saved). Stored apart from the game save under `magnetic-field-settings` (no version; unknown or wrong fields fall back to defaults). Releasing a volume slider plays a click at the new level.
+- **Tutorial tips** (`ui/tips.ts`, `render/tips.ts`): during the first runs a small amber `TIP` box points at what to do next, one tip at a time, in this order: *move* the mouse over the board (until the first coin is caught) → *buy* an upgrade (once one is affordable, until the first purchase) → keys *1–7* → *Pulse* is ready (SPACE / right click) → *Esc / Tab* for menu and stats (after ~100 s of a run) → the *Core tree* preview (T, from 100k) → *Shift Polarity* (at the first goal) → the *Magnetron* (after the first shift, until the first pull). A tip disappears when the player does the thing, after a few seconds for the informational ones, or on a click; tips seen once never come back. Seen tips are a setting (`tipsSeen`), so New Game doesn't repeat them; Settings → TUTORIAL TIPS turns them off, and back on shows them all again.
+- **Settings** (from the title or the pause menu, `Esc` = back): master / effects volume sliders (live – effects play at master × effects), a music slider (placeholder until there is music, but saved), Screen shake toggle (anti-coin hits), Fullscreen toggle (also `F11`; follows the browser state, not saved), Tutorial tips toggle. Stored apart from the game save under `magnetic-field-settings` (no version; unknown or wrong fields fall back to defaults). Releasing a volume slider plays a click at the new level.
 - Any debug URL param skips the title screen and starts the run directly.
 
 ### Sound
@@ -105,7 +106,7 @@ Against noise late in a run (hundreds of pickups per second) each simulation ste
 
 ## Hosting
 
-Local only for now (`npm run dev` / `npm run preview`).
+**GitHub Pages: https://32blejd.github.io/magnetic-field/** – `.github/workflows/deploy.yml` runs the tests, builds and publishes `dist/` on every push to `main`. `vite.config.ts` uses a relative `base: './'`, so the same build works at the site root locally and under `/magnetic-field/`. The save on the site is separate from the one on `localhost` (different origin). Locally: `npm run dev` / `npm run preview`.
 
 ## Upgrades
 
@@ -254,7 +255,7 @@ The Core tree grows from a 4-point compass into an 8- and a 16-point rose, all i
 2. **Stage 2 – the broken compass**: four hybrid branches between the cardinals, each `b1 → b2/b3 → keystone` from the Polarity Core, 16 nodes, 254 ◆.
 3. **Stage 3 – the full rose**: eight mastery spokes, each `b1 → mastery node`; a spoke's b1 grows from the keystones of its two neighbours (NNE from N and NE…). 16 nodes, 400 ◆.
 4. **Break the Compass** – the last upgrade, a gold star above N, **100 ◆**: every upgrade can go **50 levels past its cap**, coin value ×3, +2 Drones, +2 Satellites. Buying it (after the shift confirm) shows the **ending**: a star bursting out of the rose, `THE COMPASS IS BROKEN`, **`THANK YOU FOR PLAYING`**, shifts / Cores earned / Lodestones, a credits line, then `PLAY ON · ENDLESS` (`Enter`).
-5. **Endless**: the game goes on – the prestige bar says `POLARITY SHIFT · ENDLESS`, the goal keeps growing with every shift (×300 multiplier, ~1:35 runs that stay stable), the tree is complete and locked (no refunds or reset). Best-time records are not done yet.
+5. **Endless**: the game goes on – the prestige bar says `POLARITY SHIFT · ENDLESS · +N% from Cores`, the goal keeps growing with every shift (×300 multiplier), the tree is complete and locked (no refunds or reset). Cores have nothing left to buy, so **every unspent Core adds +0.03% coin value** (+1% per ~33 Cores, `BREAK_COMPASS.heldCoreValue`): endless runs of the average bot go 1:36 → 0:55 after 40 runs → 0:40 after 80 → 0:15 after 180 (~3 h), a slow sense of progress. +1% per Core was tried: runs dropped to 6 s within 20 runs (the bot banks ~15 Cores a run, the goal grows ~1% a run). Best-time records are not done yet.
 
 Whole tree: **1,000 ◆** (246 + 254 + 400 + 100).
 
@@ -405,4 +406,5 @@ Work on `npm run dev` / `npm run preview`: `?nosave=1` don't load/write the save
 - Drones are very strong for idle play: 3 Drones + Auto-buyer earn ~84% of an active player's income with nobody at the mouse. Fine for "the game plays itself", or tune down (e.g. Drone speed 140 → 100 px/s or field 45% → 35%) so active play stays clearly better? Needs a target.
 - Endless mode: Cores have nothing left to buy after the ending – best-time records (per run? time to goal?) or another sink?
 - Credits line on the ending screen is generic – add the author's name?
+- Tutorial tips are text-only and appear in the first runs; a tip for the Core tree screen itself (click to buy, right click to refund) is still left to the legend there.
 - Keystones give only 0…−8% run time in active play (Satellites 3: −4% for 30 Cores) – consider buffing them in the late-run balance pass.

@@ -190,4 +190,9 @@ export const STAGE_NODES: Readonly<Record<Stage, readonly NodeDef[]>> = {
 };
 
 /** Break the Compass (the last upgrade): extra levels on every upgrade cap and its other bonuses. */
-export const BREAK_COMPASS = { extraLevels: 50, valueMult: 3, drones: 2, satellites: 2 };
+export const BREAK_COMPASS = {
+  extraLevels: 50, valueMult: 3, drones: 2, satellites: 2,
+  /** Endless: coin value per unspent Core (nothing is left to buy with them) – +1% per ~33 Cores. Small on purpose: the bot banks
+      ~15 Cores a run, so +1% per Core shrank endless runs from 1:30 to a few seconds within 20 runs. */
+  heldCoreValue: 0.0003,
+};

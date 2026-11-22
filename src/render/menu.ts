@@ -184,7 +184,8 @@ export function drawSettings(ctx: Ctx, s: Settings, fullscreen: boolean, cursor:
   for (const { id, y, knob, hit } of TOGGLES) {
     const hover = dragging === null && hov(cursor, hit);
     if (id === 'screenShake') toggle(ctx, MENU.screenShake, y, knob, s.screenShake, MENU.screenShakeNote, hover);
-    else toggle(ctx, MENU.fullscreen, y, knob, fullscreen, MENU.fullscreenNote, hover);
+    else if (id === 'fullscreen') toggle(ctx, MENU.fullscreen, y, knob, fullscreen, MENU.fullscreenNote, hover);
+    else toggle(ctx, MENU.tips, y, knob, s.tips, MENU.tipsNote, hover);
   }
   button(ctx, SETTINGS_BACK, MENU.back, { hover: hov(cursor, SETTINGS_BACK), key: MENU.escKey });
 }

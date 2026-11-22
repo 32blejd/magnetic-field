@@ -10,10 +10,14 @@ export interface Settings {
   effects: number;
   /** Shake the board when an anti-coin hits the magnet. */
   screenShake: boolean;
+  /** Show tutorial tips. */
+  tips: boolean;
+  /** Tips already shown (ui/tips.ts ids). Turning tips back on clears it. */
+  tipsSeen: string[];
 }
 export type VolumeId = 'master' | 'music' | 'effects';
 
-export const defaultSettings = (): Settings => ({ master: 0.8, music: 0.6, effects: 0.8, screenShake: true });
+export const defaultSettings = (): Settings => ({ master: 0.8, music: 0.6, effects: 0.8, screenShake: true, tips: true, tipsSeen: [] });
 
 const volume = (v: unknown, fallback: number): number =>
   typeof v === 'number' && Number.isFinite(v) ? Math.min(1, Math.max(0, v)) : fallback;
@@ -31,6 +35,8 @@ export function parseSettings(text: string | null): Settings {
     music: volume(r.music, def.music),
     effects: volume(r.effects, def.effects),
     screenShake: typeof r.screenShake === 'boolean' ? r.screenShake : def.screenShake,
+    tips: typeof r.tips === 'boolean' ? r.tips : def.tips,
+    tipsSeen: Array.isArray(r.tipsSeen) ? r.tipsSeen.filter((x): x is string => typeof x === 'string') : def.tipsSeen,
   };
 }
 

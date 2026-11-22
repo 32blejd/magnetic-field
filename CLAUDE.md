@@ -25,6 +25,8 @@ npm run sim:m5 -- [shifts=9] [seeds=3]       # impact of each M5 node on a late 
 
 Sound board (every sound effect, to tune by ear): `npm run dev`, then open `/sounds.html` (dev only, not built).
 
+Deploy: every push to `main` runs `.github/workflows/deploy.yml` (tests, build, GitHub Pages) → https://32blejd.github.io/magnetic-field/. Keep `base: './'` in `vite.config.ts` so the build works under that subpath.
+
 `npm test` goes through `scripts/vitest.mjs`, which upper-cases the drive letter of the working directory first. On Windows a `c:\…` cwd (e.g. a VS Code terminal) makes Vitest load itself twice and every test fails with "Cannot read properties of undefined (reading 'config')". Don't call `vitest` directly.
 
 Debug URL params (dev or preview): `?nosave=1`, `?reset=1`, `?earned=N`, `?cores=N`, `?shifts=N`, `?crystals=N`, `?pulls=N`, `?open=shift|browse|gacha|ending|stats`, `?warm=N`, `?speed=N`, `?rare=1`, `?anti=1`, `?nodes=Nkey:3,Wb2|stage1..3|all` – see `src/debug.ts`. Any of them skips the title screen (without params the game opens on the title screen).
@@ -39,7 +41,7 @@ src/
   save/      # save/load, versioning, migrations; settings.ts (player settings, own key)
   render/    # canvas drawing (board, HUD, panel, prestige bar, Core tree, Magnetron, menus, Stats, ending) and visual-only effects
   audio/     # sound effects: cues.ts (events → sounds, pure) and synth.ts (Web Audio recipes); soundboard.ts for sounds.html
-  ui/        # layout rects, input, number formatting, all UI strings
+  ui/        # layout rects, input, number formatting, all UI strings, tutorial tip rules (tips.ts)
   debug.ts   # debug URL params
   main.ts    # wires everything together, game loop
 scripts/     # bot + balance simulator (balance-sim.ts, m5-impact.ts), Vitest launcher
@@ -64,7 +66,7 @@ docs/        # DESIGN.md – game design, numbers, balance tables; docs/mockups/
 - Loading is tolerant: only currency and levels are required, missing fields fall back to defaults, wrong types reject the save. A save that can't be read (corrupted or from a newer version) is copied to `magnetic-field-save-unreadable` before the game starts fresh, so autosave never destroys it; the player sees a banner.
 - Every change to the saved shape = bump `CURRENT_VERSION` + a migration step in `save/migrations.ts` + a test. Never break old saves.
 - Autosave every 30 s and on `visibilitychange`/`beforeunload`, only while a run is open (never from the title screen), and when leaving to the menu. Export/import as base64 text exists in `save/save.ts` (no UI yet).
-- Settings (volumes, screen shake) live under their own key `magnetic-field-settings` (`save/settings.ts`, no version, tolerant parsing) – changing them needs no save bump, and New Game doesn't erase them.
+- Settings (volumes, screen shake, tutorial tips and which tips were seen) live under their own key `magnetic-field-settings` (`save/settings.ts`, no version, tolerant parsing) – changing them needs no save bump, and New Game doesn't erase them.
 
 ## Conventions
 

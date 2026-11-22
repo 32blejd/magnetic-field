@@ -90,7 +90,7 @@ export const NODE_TEXT: Record<string, { name: string; desc: string }> = {
   NNWkey: { name: 'Combo Limit II', desc: 'MASTERY · Max combo multiplier ×3.' },
   compass: {
     name: 'Break the Compass',
-    desc: 'THE LAST UPGRADE · Every upgrade can go 50 levels past its cap, coin value ×3, +2 Drones and +2 Satellites. Ends the game – then play on forever.',
+    desc: 'THE LAST UPGRADE · Every upgrade can go 50 levels past its cap, coin value ×3, +2 Drones and +2 Satellites. Ends the game – then play on forever: in endless every 33 unspent Cores add +1% coin value.',
   },
 };
 
@@ -184,7 +184,7 @@ export const S = {
   unlockHint: (n: string) => `Earn ${n} to unlock`,
 
   prestigeTitle: 'POLARITY SHIFT',
-  endlessTitle: 'POLARITY SHIFT · ENDLESS',
+  endlessTitle: (pct: string) => `POLARITY SHIFT · ENDLESS · +${pct}% from Cores`,
   prestigeProgress: (goal: string, earned: string) => `Earn ${goal} this run · ${earned}`,
   prestigeReadyTitle: 'POLARITY SHIFT · READY',
   prestigeReadyLine: (earned: string) => `Earned ${earned} · shift now for`,
@@ -293,6 +293,8 @@ export const MENU = {
   screenShakeNote: 'anti-coin hits',
   fullscreen: 'FULLSCREEN',
   fullscreenNote: '[F11]',
+  tips: 'TUTORIAL TIPS',
+  tipsNote: 'on = show them again',
   on: 'ON',
   off: 'OFF',
   back: '◀  BACK',
@@ -302,7 +304,7 @@ export const MENU = {
   endThanks: 'THANK YOU FOR PLAYING',
   endStats: (shifts: string, cores: string, stones: string) => `${shifts} Polarity Shifts · ${cores} ◆ Cores earned · ${stones}/16 Lodestones`,
   endCredits: 'Magnetic Field – an incremental game about one magnet and a lot of coins',
-  endEndless: 'From now on every upgrade can go 50 levels past its cap, and the run goal keeps growing forever.',
+  endEndless: 'From now on every upgrade can go 50 levels past its cap, every 33 unspent Cores add +1% coin value, and the run goal keeps growing.',
   endPlayOn: 'PLAY ON · ENDLESS',
 };
 
@@ -345,4 +347,18 @@ export const STATS_TEXT = {
   pulls: 'Lodestone pulls',
   antiDodged: 'Anti-coins dodged',
   boardHint: '[Tab] stats',
+};
+
+/** Tutorial tips (ui/tips.ts). */
+export const TIPS = {
+  label: 'TIP',
+  dismiss: 'click to hide',
+  move: 'Move the mouse over the board – your cursor is a magnet. Coins inside the field fly to it; coins that drift off the board are lost.',
+  buy: 'You can afford an upgrade! Click its price. Value is the best one to start with.',
+  keys: 'Keys 1–7 buy the upgrade in that row, so your cursor can stay on the board.',
+  pulse: 'Pulse is ready: press SPACE or right-click to triple your field for a second.',
+  menu: 'Esc opens the menu (settings, stats). Tab shows your stats and mini-goals.',
+  tree: 'The Core tree is open: press T to preview what Polarity Shift will let you buy.',
+  shift: 'Goal reached! SHIFT POLARITY (or P) starts a new run and gives you Cores for the Core tree. Playing on first gives more Cores.',
+  gacha: 'New: the Magnetron (G). Spend Charge Crystals on Lodestones – permanent coin bonuses.',
 };

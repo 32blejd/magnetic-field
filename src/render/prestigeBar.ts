@@ -1,5 +1,5 @@
 import { earnedShare } from '../game/money';
-import { autoShiftAt, bonuses, canShift, coresFor, nextCoreAt, shiftGoal, treeUnlocked } from '../game/prestige';
+import { autoShiftAt, bonuses, canShift, coresFor, endlessCoreBonus, nextCoreAt, shiftGoal, treeUnlocked } from '../game/prestige';
 import type { GameState, Vec } from '../game/types';
 import { formatNumber, formatShort } from '../ui/format';
 import { AUTO_SHIFT_BUTTON, PRESTIGE_BAR, PRESTIGE_BUTTON, inRect } from '../ui/layout';
@@ -18,7 +18,7 @@ export function drawPrestigeBar(ctx: Ctx, st: GameState, cursor: Vec | null, t: 
 
   ctx.textBaseline = 'middle';
   ctx.fillStyle = COLORS.magenta; ctx.font = `700 11px ${FONT}`;
-  ctx.fillText(ready ? S.prestigeReadyTitle : bonuses(st.meta).compassBroken ? S.endlessTitle : S.prestigeTitle, R.x + 16, R.y + 18);
+  ctx.fillText(ready ? S.prestigeReadyTitle : bonuses(st.meta).compassBroken ? S.endlessTitle(formatNumber(Math.round(endlessCoreBonus(st.meta) * 100))) : S.prestigeTitle, R.x + 16, R.y + 18);
   ctx.font = `11px ${FONT}`; ctx.fillStyle = COLORS.sub;
   if (ready) {
     const line = S.prestigeReadyLine(formatShort(st.totalEarned));

@@ -34,7 +34,7 @@ export const STATS_BOX: Rect = { x: 70, y: 40, w: 820, h: 460 };
 /** Ending screen button. */
 export const ENDING_BUTTON: Rect = { x: 960 / 2 - 140, y: 440, w: 280, h: 44 };
 
-export const SETTINGS_BOX: Rect = { x: 230, y: 70, w: 500, h: 400 };
+export const SETTINGS_BOX: Rect = { x: 230, y: 50, w: 500, h: 440 };
 const SX = SETTINGS_BOX.x + 40;
 /** Left edge of the setting labels. */
 export const SETTINGS_LABEL_X = SX;
@@ -48,9 +48,9 @@ export const sliderHit = (track: Rect): Rect => ({ x: track.x - 10, y: track.y -
 /** Slider value 0–1 from a pointer x. */
 export const sliderValue = (track: Rect, x: number): number => Math.min(1, Math.max(0, (x - track.x) / track.w));
 
-export type ToggleId = 'screenShake' | 'fullscreen';
+export type ToggleId = 'screenShake' | 'fullscreen' | 'tips';
 /** Toggle rows: center line y, the switch and the clickable row (label + switch + ON/OFF). */
-export const TOGGLES: { id: ToggleId; y: number; knob: Rect; hit: Rect }[] = (['screenShake', 'fullscreen'] as const).map((id, i) => {
+export const TOGGLES: { id: ToggleId; y: number; knob: Rect; hit: Rect }[] = (['screenShake', 'fullscreen', 'tips'] as const).map((id, i) => {
   const y = SETTINGS_BOX.y + 256 + i * 35;
   return { id, y, knob: { x: SX + 170, y: y - 10, w: 44, h: 20 }, hit: { x: SX - 6, y: y - 13, w: 290, h: 26 } };
 });

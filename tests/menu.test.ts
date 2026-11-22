@@ -18,15 +18,16 @@ describe('settings', () => {
   });
 
   it('keeps valid fields, clamps volumes and defaults wrong types', () => {
-    const s = parseSettings(JSON.stringify({ master: 2, music: -1, effects: 'loud', screenShake: false, extra: 1 }));
-    expect(s).toEqual({ master: 1, music: 0, effects: defaultSettings().effects, screenShake: false });
+    const s = parseSettings(JSON.stringify({ master: 2, music: -1, effects: 'loud', screenShake: false, extra: 1, tips: 'yes', tipsSeen: ['move', 3] }));
+    expect(s).toEqual({ master: 1, music: 0, effects: defaultSettings().effects, screenShake: false, tips: true, tipsSeen: ['move'] });
   });
 
   it('round-trips through storage under its own key, apart from the game save', () => {
     const storage = memoryStorage();
-    saveSettings({ master: 0.3, music: 0, effects: 1, screenShake: false }, storage);
+    const saved = { master: 0.3, music: 0, effects: 1, screenShake: false, tips: false, tipsSeen: ['move', 'buy'] };
+    saveSettings(saved, storage);
     expect([...storage.data.keys()]).toEqual([SETTINGS_KEY]);
-    expect(loadSettings(storage)).toEqual({ master: 0.3, music: 0, effects: 1, screenShake: false });
+    expect(loadSettings(storage)).toEqual(saved);
   });
 });
 

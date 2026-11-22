@@ -1,6 +1,8 @@
 import { CueGate, cuesFor, nodeCue, revealCues, type SoundId } from './audio/cues';
 import { Synth } from './audio/synth';
 import { readDebugOptions } from './debug';
+import { activeTip, TIP_TIMEOUT, type TipId } from './ui/tips';
+import { drawTip, tipRect } from './render/tips';
 import { BOARD, STEP, VIEW } from './data/tuning';
 import { triggerPulse } from './game/abilities';
 import { magnetronUnlocked, pullMany } from './game/lodestones';
@@ -71,6 +73,13 @@ window.addEventListener('pointerdown', () => sfx.unlock());
 window.addEventListener('keydown', () => sfx.unlock());
 const sound = (id: SoundId): void => sfx.play({ id });
 const click = (): void => sound('uiClick');
+// Tutorial tips: one at a time while playing; done tips are remembered in the settings
+let tip: TipId | null = null, tipT = 0;
+function markTip(id: TipId): void {
+  if (settings.tipsSeen.includes(id)) return;
+  settings.tipsSeen.push(id);
+  saveSettings(settings, localStorage);
+}
 if (loaded.movedToBackup) fx.banner(S.saveUnreadable.title, S.saveUnreadable.sub, COLORS.red, 6);
 const events: GameEvent[] = [];
 let cursor: Vec | null = null;
@@ -103,6 +112,7 @@ function tick(): void {
   step(st, STEP, magnet(), events);
   fx.handle(events, st);
   for (const c of cuesFor(events, st.combo, cueGate, performance.now() / 1000)) sfx.play(c);
+  if (events.some(e => e.type === 'pickup')) markTip('move');
   fx.update(STEP, st);
   if (autoShiftDue(st)) autoShift();
 }
@@ -111,6 +121,7 @@ function tick(): void {
 function autoShift(): void {
   const gained = commitAutoShift(st);
   sound('autoShift');
+  markTip('shift');
   fx.reset();
   fx.banner(S.autoShiftDone(formatNumber(st.meta.shifts)), S.autoShiftDoneSub(formatNumber(gained), formatNumber(st.meta.cores), formatShort(shiftGoal(st.meta))), COLORS.green, 4);
   lastBoardPos = null;
@@ -162,12 +173,13 @@ function toggleFullscreen(): void {
   else document.documentElement.requestFullscreen?.().catch(() => {});
 }
 function openTree(mode: TreeMode): void {
+  markTip('tree');
   tree = newTreeView(mode, mode === 'shift' ? startDraft(st) : null, openStage(st.meta.nodes));
   screen = 'tree';
   click();
 }
 function closeTree(): void { tree = null; screen = 'run'; click(); }
-function openMagnetron(): void { if (magnetronUnlocked(st)) { magnetron = newMagnetronView(); screen = 'gacha'; click(); } }
+function openMagnetron(): void { if (magnetronUnlocked(st)) { magnetron = newMagnetronView(); screen = 'gacha'; click(); markTip('gacha'); } }
 function closeMagnetron(): void { magnetron = null; screen = 'run'; click(); }
 function doPull(count: number): void {
   if (!magnetron) return;
@@ -182,6 +194,7 @@ function finishShift(): void {
   if (!tree?.draft) return;
   const wasBroken = bonuses(st.meta).compassBroken;
   commitShift(st, tree.draft);
+  markTip('shift');
   fx.reset();
   fx.banner(S.shiftDone(String(st.meta.shifts)), S.shiftDoneSub(formatShort(shiftGoal(st.meta))), COLORS.core, 4);
   lastBoardPos = null;
@@ -203,7 +216,7 @@ function tryBuy(row: number, bulk: boolean): void {
   const r = visibleRows(st)[row];
   if (!r || r.locked) return;
   const bought = bulk && bonuses(st.meta).bulkBuy ? buyMax(st, r.def) > 0 : buy(st, r.def);
-  if (bought) fx.flash[r.def.id] = 0.3;
+  if (bought) { fx.flash[r.def.id] = 0.3; markTip('buy'); }
   sound(!bought ? 'buyFail' : isMaxed(st, r.def) ? 'buyMax' : 'buy');
 }
 function pressPrestigeButton(): void {
@@ -294,12 +307,18 @@ setupInput(canvas, {
       if (inRect(p, SETTINGS_BACK)) { closeSettings(); return; }
       const t = TOGGLES.find(r => inRect(p, r.hit));
       if (t?.id === 'screenShake') { settings.screenShake = fx.shakeOn = !settings.screenShake; saveSettings(settings, localStorage); click(); }
+      else if (t?.id === 'tips') { // turning tips back on shows them all again
+        settings.tips = !settings.tips;
+        if (settings.tips) settings.tipsSeen = [];
+        saveSettings(settings, localStorage); click();
+      }
       else if (t?.id === 'fullscreen') { toggleFullscreen(); click(); }
     } else if (screen === 'stats') {
       if (!inRect(p, STATS_BOX)) closeStats(); // a click outside the panel closes it
     } else if (screen === 'ending') {
       if (endingT > 1.6 && inRect(p, ENDING_BUTTON)) resume();
     } else if (screen === 'run') {
+      if (tip && inRect(p, tipRect(ctx, tip))) { markTip(tip); click(); return; } // a click on a tip hides it
       if (inRect(p, GEAR_BUTTON)) { openPause(); return; }
       if (inRect(p, PRESTIGE_BUTTON)) { pressPrestigeButton(); return; }
       if (inRect(p, MAGNETRON_BUTTON)) { openMagnetron(); return; }
@@ -353,8 +372,8 @@ setupInput(canvas, {
     if (screen === 'settings') { if (code === 'Escape') closeSettings(); return false; }
     if (screen === 'ending') { if (endingT > 1.6 && (code === 'Enter' || code === 'Escape')) resume(); return false; }
     if (screen === 'run') {
-      if (code === 'Escape') { openPause(); return true; }
-      if (code === 'Tab') { openStats('run'); return true; }
+      if (code === 'Escape') { markTip('menu'); openPause(); return true; }
+      if (code === 'Tab') { markTip('menu'); openStats('run'); return true; }
       if (code === 'Space') { pulse(); return true; }
       if (code === 'KeyT' && treeUnlocked(st)) openTree('browse');
       if (code === 'KeyP' && canShift(st)) openTree('shift');
@@ -362,7 +381,7 @@ setupInput(canvas, {
       if (code === 'KeyA') cycleAutoShift();
       if (code === 'KeyB') toggleAutoBuy();
       const row = rowKey(code);
-      if (row >= 0) tryBuy(row, shift);
+      if (row >= 0) { tryBuy(row, shift); markTip('keys'); }
       return false;
     }
     if (screen === 'gacha' && magnetron && (code === 'Escape' || code === 'KeyG')) { if (magnetron.results) { magnetron.results = null; click(); } else closeMagnetron(); }
@@ -376,6 +395,7 @@ setupInput(canvas, {
 function pulse(): void {
   if (!triggerPulse(st)) return;
   sound('pulse');
+  markTip('pulse');
   const m = magnet();
   if (m) fx.pulseShock(m, getStats(st).range);
 }
@@ -402,6 +422,12 @@ function frame(now: number): void {
   } else acc = 0; // the run is paused while the Core tree is open
   if (magnetron) magnetron.revealT += dt;
   if (screen === 'ending') endingT += dt;
+  if (screen === 'run') { // tutorial tip: the first relevant unseen one; timed tips hide on their own
+    const next = settings.tips ? activeTip(st, settings.tipsSeen) : null;
+    if (next !== tip) { tip = next; tipT = 0; } else tipT += dt;
+    const limit = tip ? TIP_TIMEOUT[tip] : null;
+    if (tip && limit !== null && tipT > limit) markTip(tip);
+  }
   if (tree) { for (const f of tree.flashes) f.life -= dt; tree.flashes = tree.flashes.filter(f => f.life > 0); }
   if (screen === 'shift' && (shiftAnim += dt) >= SHIFT_ANIM) finishShift();
   if (cursor) updateCursorStyle(cursor); // also right after a screen change, not only on mouse moves
@@ -423,6 +449,7 @@ function frame(now: number): void {
     drawPanel(ctx, st, fx, live);
     drawGear(ctx, live);
     drawTooltip(ctx, st, live);
+    if (screen === 'run' && tip) drawTip(ctx, tip, tipT, cursor);
     if (screen === 'pause') drawPause(ctx, cursor);
     if (screen === 'stats') drawStats(ctx, st, fx);
   } else if (screen === 'tree') drawTree(ctx, st, tree, cursor, uiTime);
