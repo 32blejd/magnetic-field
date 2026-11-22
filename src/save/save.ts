@@ -5,7 +5,7 @@ import { EVENTS } from '../data/tuning';
 import { UPGRADES, UPGRADE_IDS, type UpgradeId } from '../data/upgrades';
 import { levelCap } from '../game/shop';
 import { createState } from '../game/state';
-import type { FeatureId, GameState, MetaState } from '../game/types';
+import type { FeatureId, GameState, LifetimeStats, MetaState } from '../game/types';
 import { CURRENT_VERSION, migrate, type SaveData } from './migrations';
 
 export const SAVE_KEY = 'magnetic-field-save';
@@ -35,7 +35,7 @@ export function toSave(st: GameState, now = Date.now()): SaveData {
     stats: { ...st.stats, caught: { ...st.stats.caught } },
     nextEvent: st.nextEvent,
     pulseCd: st.pulseCd,
-    meta: { ...st.meta, nodes: { ...st.meta.nodes }, lodestones: { ...st.meta.lodestones } },
+    meta: { ...st.meta, nodes: { ...st.meta.nodes }, lodestones: { ...st.meta.lodestones }, life: { ...st.meta.life, caught: { ...st.meta.life.caught } } },
   };
 }
 
@@ -61,6 +61,16 @@ function metaFromSave(m: SaveData['meta']): MetaState {
     pity: Math.max(0, Math.floor(num(m?.pity, 0))),
     autoShift: AUTO_SHIFT_TARGETS.includes(num(m?.autoShift, 0)) ? num(m?.autoShift, 0) : 0,
     autoBuyOff: m?.autoBuyOff === true,
+    life: lifeFromSave(m?.life),
+  };
+}
+
+function lifeFromSave(l: NonNullable<SaveData['meta']>['life']): LifetimeStats {
+  const n = (v: unknown) => Math.max(0, num(v, 0));
+  return {
+    time: n(l?.time), earned: n(l?.earned),
+    caught: { basic: n(l?.caught?.basic), gold: n(l?.caught?.gold), prism: n(l?.caught?.prism), void: n(l?.caught?.void) },
+    bestCombo: n(l?.bestCombo), goals: n(l?.goals), pulls: n(l?.pulls), antiDodged: n(l?.antiDodged), fastest: n(l?.fastest),
   };
 }
 
@@ -89,6 +99,7 @@ export function fromSave(data: SaveData): GameState {
     missed: num(s.missed, 0),
     anti: num(s.anti, 0),
     bestCombo: num(s.bestCombo, 0),
+    events: num(s.events, 0),
   };
   st.nextEvent = num(data.nextEvent, EVENTS.first);
   st.pulseCd = Math.max(0, num(data.pulseCd, 0));

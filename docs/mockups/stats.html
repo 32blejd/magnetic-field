@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Stats – UI Mockup</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #04050c; color: #e6fbff; font: 13px Consolas, "Courier New", monospace; }
+  body { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; }
+  nav { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+  nav button { background: #080c1e; color: #5f9bb3; border: 1px solid rgba(0,229,255,.35); border-radius: 6px; padding: 6px 12px; font: inherit; cursor: pointer; }
+  nav button.on { color: #00f0ff; border-color: #00f0ff; box-shadow: 0 0 10px rgba(0,240,255,.4); }
+  canvas { display: block; width: min(100vw, calc((100vh - 60px) * 16 / 9)); aspect-ratio: 16 / 9; }
+</style>
+</head>
+<body>
+<nav>
+  <button data-s="board" class="on">0 · Board without HUD</button>
+  <button data-s="pause">1 · Pause with STATS</button>
+  <button data-s="stats">2 · Stats (Tab)</button>
+</nav>
+<canvas id="c"></canvas>
+<script>
+/* UI mockup only – not wired to the game. Logical view 960×540 like the game. Pick a screen with #board, #pause, #stats. */
+const W = 960, H = 540, FONT = 'Consolas, "Courier New", monospace';
+const C = { bg: '#04050c', board: '#070a1a', panel: '#080c1e', cyan: '#00f0ff', magenta: '#ff2bd6', amber: '#ffc21a', green: '#4dff9a', red: '#ff3355', text: '#e6fbff', sub: '#5f9bb3', core: '#b98cff', void: '#9d4dff' };
+const BOARD = { x: 16, y: 16, w: 700, h: 446 }, PANEL = { x: 732, y: 16, w: 212, h: 508 }, BAR = { x: 16, y: 472, w: 700, h: 52 };
+
+const cv = document.getElementById('c'), dpr = Math.max(2, devicePixelRatio || 1);
+cv.width = W * dpr; cv.height = H * dpr;
+const ctx = cv.getContext('2d'); ctx.scale(dpr, dpr);
+const glow = (c, b) => { ctx.shadowColor = c; ctx.shadowBlur = b; }, noGlow = () => { ctx.shadowBlur = 0; };
+function hex(x, y, r, rot = Math.PI / 6) { ctx.beginPath(); for (let i = 0; i < 6; i++) { const a = rot + i * Math.PI / 3; ctx[i ? 'lineTo' : 'moveTo'](x + Math.cos(a) * r, y + Math.sin(a) * r); } ctx.closePath(); }
+function text(s, x, y, { size = 12, weight = 400, color = C.text, align = 'left' } = {}) {
+  ctx.font = `${weight} ${size}px ${FONT}`; ctx.fillStyle = color; ctx.textAlign = align; ctx.textBaseline = 'middle'; ctx.fillText(s, x, y);
+  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+}
+function box(x, y, w, h, stroke, fill = C.panel, r = 10, blur = 16) {
+  glow(stroke, blur); ctx.fillStyle = fill; ctx.beginPath(); ctx.roundRect(x, y, w, h, r); ctx.fill();
+  ctx.strokeStyle = stroke; ctx.lineWidth = 1.2; ctx.stroke(); noGlow();
+}
+function button(x, y, w, h, label, { primary = false, hover = false, key = null } = {}) {
+  const col = primary ? C.magenta : C.cyan;
+  if (primary || hover) glow(col, hover ? 20 : 10);
+  ctx.fillStyle = primary ? col + (hover ? '40' : '1a') : hover ? 'rgba(0,240,255,.12)' : 'rgba(8,12,30,.85)';
+  ctx.beginPath(); ctx.roundRect(x, y, w, h, 8); ctx.fill();
+  ctx.strokeStyle = col; ctx.lineWidth = 1.3; ctx.stroke(); noGlow();
+  text(label, x + w / 2, y + h / 2 + 1, { size: 14, weight: 700, color: primary ? '#ffd0f5' : col, align: 'center' });
+  if (key) text(key, x + w - 12, y + h / 2 + 1, { size: 10, color: C.sub, align: 'right' });
+}
+const dim = () => { ctx.fillStyle = 'rgba(2,3,10,.72)'; ctx.fillRect(0, 0, W, H); };
+
+/* ---------- the run, with the stats line and goal tracker gone ---------- */
+function gameBackdrop(banner) {
+  ctx.fillStyle = C.bg; ctx.fillRect(0, 0, W, H);
+  box(BOARD.x, BOARD.y, BOARD.w, BOARD.h, 'rgba(0,229,255,.5)', C.board, 10, 8);
+  ctx.strokeStyle = 'rgba(0,229,255,.05)';
+  for (let x = BOARD.x; x < BOARD.x + BOARD.w; x += 28) { ctx.beginPath(); ctx.moveTo(x, BOARD.y); ctx.lineTo(x, BOARD.y + BOARD.h); ctx.stroke(); }
+  for (let y = BOARD.y; y < BOARD.y + BOARD.h; y += 28) { ctx.beginPath(); ctx.moveTo(BOARD.x, y); ctx.lineTo(BOARD.x + BOARD.w, y); ctx.stroke(); }
+  for (const [x, y, col] of [[200, 160, C.cyan], [420, 300, C.cyan], [560, 140, C.amber], [300, 380, C.cyan], [610, 330, '#ff6be3'], [150, 300, C.cyan], [520, 400, C.cyan]]) { glow(col, 10); ctx.fillStyle = col; hex(x, y, 10); ctx.fill(); noGlow(); }
+  ctx.strokeStyle = 'rgba(255,43,214,.6)'; ctx.setLineDash([6, 6]); ctx.beginPath(); ctx.arc(380, 250, 70, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
+  glow(C.magenta, 14); ctx.strokeStyle = C.magenta; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(380, 250, 10, 0, Math.PI * 2); ctx.stroke(); noGlow(); ctx.lineWidth = 1;
+  text('×1.9', 400, 228, { size: 12, weight: 700, color: C.amber }); text('COMBO 18', 400, 242, { size: 9, color: C.amber });
+  if (banner) { // mini-goal feedback stays: banner + reward
+    glow(C.amber, 14); text('GOAL COMPLETE · +49,083', BOARD.x + BOARD.w / 2, BOARD.y + 52, { size: 20, weight: 700, color: C.amber, align: 'center' }); noGlow();
+    text('Catch 100 coins', BOARD.x + BOARD.w / 2, BOARD.y + 76, { size: 11, align: 'center' });
+  }
+  ctx.fillStyle = 'rgba(8,12,30,.85)'; ctx.beginPath(); ctx.roundRect(BOARD.x + 12, BOARD.y + BOARD.h - 34, 150, 22, 6); ctx.fill();
+  ctx.strokeStyle = C.magenta; ctx.stroke(); text('PULSE  [SPACE]', BOARD.x + 22, BOARD.y + BOARD.h - 23, { size: 10, weight: 700, color: C.magenta });
+  text('[Tab] stats', BOARD.x + BOARD.w - 12, BOARD.y + BOARD.h - 23, { size: 10, color: 'rgba(95,155,179,.55)', align: 'right' });
+
+  box(BAR.x, BAR.y, BAR.w, BAR.h, 'rgba(255,43,214,.5)', C.panel, 10, 6);
+  text('POLARITY SHIFT', BAR.x + 16, BAR.y + 18, { size: 11, weight: 700, color: C.magenta });
+  text('Earn 2.5M this run · 640k', BAR.x + 16, BAR.y + 35, { size: 11, color: C.sub });
+  box(PANEL.x, PANEL.y, PANEL.w, PANEL.h, '#00e5ff', C.panel, 10, 10);
+  glow(C.cyan, 8); ctx.fillStyle = C.cyan; hex(PANEL.x + 26, PANEL.y + 33, 8); ctx.fill(); noGlow();
+  text('48,210', PANEL.x + 42, PANEL.y + 33, { size: 22, weight: 600 });
+  text('+1,204.5 / s', PANEL.x + 42, PANEL.y + 54, { size: 12, color: C.sub });
+  ctx.strokeStyle = C.sub; ctx.beginPath(); ctx.roundRect(PANEL.x + PANEL.w - 34, PANEL.y + 10, 24, 24, 6); ctx.stroke();
+  text('⚙', PANEL.x + PANEL.w - 22, PANEL.y + 23, { size: 14, color: C.sub, align: 'center' });
+  text('UPGRADES', PANEL.x + 16, PANEL.y + 82, { size: 11, weight: 700, color: C.magenta });
+  ['VALUE', 'RANGE', 'SPAWN RATE', 'STRENGTH', 'CAPACITY', 'RARITY', 'COIN SPEED'].forEach((n, i) => {
+    const y = PANEL.y + 96 + i * 58;
+    ctx.fillStyle = 'rgba(0,229,255,.05)'; ctx.beginPath(); ctx.roundRect(PANEL.x + 10, y, PANEL.w - 20, 54, 7); ctx.fill();
+    text(n, PANEL.x + 20, y + 15, { size: 13, weight: 600 });
+    text(`Lv ${12 - i}/20  [${i + 1}]`, PANEL.x + 20, y + 32, { size: 10, color: C.sub });
+    ctx.strokeStyle = C.cyan; ctx.beginPath(); ctx.roundRect(PANEL.x + PANEL.w - 82, y + 14, 62, 26, 6); ctx.stroke();
+    text(`${(i + 2) * 3}.1k`, PANEL.x + PANEL.w - 51, y + 28, { size: 12, weight: 700, color: C.cyan, align: 'center' });
+  });
+}
+
+/* ---------- pause menu: STATS added ---------- */
+function pauseScreen() {
+  gameBackdrop(false); dim();
+  const M = { x: 330, y: 96, w: 300, h: 344 }, cx = M.x + M.w / 2;
+  box(M.x, M.y, M.w, M.h, C.cyan, C.panel, 12, 20);
+  glow(C.cyan, 14); text('PAUSED', cx, M.y + 38, { size: 22, weight: 700, color: C.cyan, align: 'center' }); noGlow();
+  text('the run is frozen while this is open', cx, M.y + 62, { size: 10, color: C.sub, align: 'center' });
+  button(M.x + 30, M.y + 86, M.w - 60, 42, 'RESUME', { primary: true, key: '[Esc]' });
+  button(M.x + 30, M.y + 140, M.w - 60, 42, 'STATS', { hover: true, key: '[Tab]' });
+  button(M.x + 30, M.y + 194, M.w - 60, 42, 'SETTINGS');
+  button(M.x + 30, M.y + 248, M.w - 60, 42, 'BACK TO MENU');
+  text('progress is saved when you leave', cx, M.y + 316, { size: 10, color: C.sub, align: 'center' });
+}
+
+/* ---------- stats ---------- */
+function row(x, y, w, label, value, color = C.text) {
+  text(label, x, y, { size: 11, color: C.sub });
+  text(value, x + w, y, { size: 11, weight: 700, color, align: 'right' });
+}
+function column(x, y, w, title, color) {
+  text(title, x, y, { size: 11, weight: 700, color });
+  ctx.strokeStyle = color + '55'; ctx.beginPath(); ctx.moveTo(x, y + 10); ctx.lineTo(x + w, y + 10); ctx.stroke();
+}
+function goalRow(x, y, w, label, steps) { // steps: [target, state, reward] state: done | now | later
+  text(label, x, y, { size: 11, weight: 700, color: C.text });
+  steps.forEach(([target, state, progress], i) => {
+    const yy = y + 16 + i * 14;
+    const col = state === 'done' ? C.amber : state === 'now' ? C.text : 'rgba(95,155,179,.5)';
+    text(state === 'done' ? '✓' : state === 'now' ? '▸' : '·', x + 4, yy, { size: 10, color: col });
+    text(state === 'now' ? `${progress} / ${target}` : target, x + 18, yy, { size: 10, color: col, weight: state === 'now' ? 700 : 400 });
+    if (state === 'now') { // progress bar
+      const bx = x + 112, bw = w - 112 - 52, k = parseFloat(progress.replace(',', '')) / parseFloat(target.replace(',', ''));
+      ctx.fillStyle = 'rgba(95,155,179,.2)'; ctx.beginPath(); ctx.roundRect(bx, yy - 2, bw, 4, 2); ctx.fill();
+      ctx.fillStyle = C.amber; ctx.beginPath(); ctx.roundRect(bx, yy - 2, bw * k, 4, 2); ctx.fill();
+    }
+    text(steps[i][3], x + w, yy, { size: 10, color: col, align: 'right' });
+  });
+}
+function statsScreen() {
+  gameBackdrop(false); dim();
+  const M = { x: 70, y: 40, w: 820, h: 460 };
+  box(M.x, M.y, M.w, M.h, C.cyan, C.panel, 12, 20);
+  glow(C.cyan, 14); text('STATS', M.x + 28, M.y + 32, { size: 22, weight: 700, color: C.cyan }); noGlow();
+  text('the run is paused while this is open', M.x + 120, M.y + 34, { size: 10, color: C.sub });
+  text('[Tab] / [Esc] close', M.x + M.w - 28, M.y + 34, { size: 10, color: C.sub, align: 'right' });
+
+  const top = M.y + 74, cw = 236, gap = 28, x1 = M.x + 28, x2 = x1 + cw + gap, x3 = x2 + cw + gap;
+  column(x1, top, cw, 'THIS RUN · SHIFT 4', C.magenta);
+  let y = top + 30;
+  for (const [l, v, c] of [
+    ['Run time', '6:41'], ['Earned', '640k / 2.50M'], ['Income now', '1,204.5 / s'], ['Catch rate', '76%'],
+    ['Coins caught', '2,412'], ['  Basic', '2,180'], ['  Gold', '214', C.amber], ['  Prism', '17', '#ff6be3'], ['  Void', '1', C.void],
+    ['Missed', '812'], ['Best combo', '214'], ['Anti-coin hits', '3', C.red], ['Events', '3'],
+  ]) { row(x1, y, cw, l, v, c); y += 22; }
+
+  column(x2, top, cw, 'MINI-GOALS · THIS RUN', C.amber);
+  goalRow(x2, top + 30, cw, 'COINS', [['10', 'done', '', '+15 s'], ['100', 'done', '', '+20 s'], ['1,000', 'now', '412', '+30 s'], ['5,000', 'later', '', '+45 s']]);
+  goalRow(x2, top + 112, cw, 'GOLD', [['10', 'done', '', '+20 s'], ['50', 'now', '28', '+30 s'], ['100', 'later', '', '+45 s']]);
+  goalRow(x2, top + 180, cw, 'PRISM', [['3', 'done', '', '+20 s'], ['7', 'done', '', '+30 s'], ['11', 'now', '9', '+40 s'], ['49', 'later', '', '+60 s']]);
+  goalRow(x2, top + 262, cw, 'ANTI-COIN', [['1', 'now', '0', '+20 s']]);
+  text('reward = seconds of perfect income', x2, top + 316, { size: 9, color: 'rgba(95,155,179,.7)' });
+  text('5 of 12 done', x2 + cw, top + 316, { size: 9, color: C.amber, align: 'right' });
+
+  column(x3, top, cw, 'LIFETIME', C.cyan);
+  y = top + 30;
+  for (const [l, v, c] of [
+    ['Play time', '2 h 14 min'], ['Coins earned', '1.24B'], ['Coins caught', '84,210'], ['  Gold', '9,120', C.amber], ['  Prism', '702', '#ff6be3'], ['  Void', '12', C.void],
+    ['Best combo ever', '412'], ['Polarity Shifts', '12'], ['Fastest run to goal', '1:52'], ['Cores earned', '148 ◆', C.core], ['Mini-goals done', '96'], ['Lodestone pulls', '41'], ['Anti-coins dodged', '1,03' + '4'],
+  ]) { row(x3, y, cw, l, v, c); y += 22; }
+}
+
+/* ---------- loop ---------- */
+let screen = (location.hash || '#board').slice(1);
+const draw = () => ({ board: () => gameBackdrop(true), pause: pauseScreen, stats: statsScreen }[screen] ?? (() => gameBackdrop(true)))();
+document.querySelectorAll('nav button').forEach(b => {
+  b.classList.toggle('on', b.dataset.s === screen);
+  b.onclick = () => { screen = b.dataset.s; location.hash = screen; document.querySelectorAll('nav button').forEach(x => x.classList.toggle('on', x === b)); draw(); };
+});
+draw();
+</script>
+</body>
+</html>

@@ -19,13 +19,14 @@ import { COLORS } from './render/theme';
 import { cellAt, drawMagnetron } from './render/magnetron';
 import { drawConfirm, drawShiftAnim, drawTree, nodeAt, treeButtons } from './render/tree';
 import { drawEnding, drawGear, drawNewGameConfirm, drawPause, drawSettings, drawTitle } from './render/menu';
+import { drawStats } from './render/stats';
 import { AUTOSAVE_INTERVAL, clearSave, loadGame, saveGame, type LoadResult } from './save/save';
 import { loadSettings, saveSettings, type VolumeId } from './save/settings';
 import { rowKey, setupInput } from './ui/input';
 import { AUTO_BUY_BUTTON, AUTO_SHIFT_BUTTON, MAGNETRON_BUTTON, PRESTIGE_BUTTON, buttonRect, inRect, visibleRows } from './ui/layout';
 import { MAG_BACK, PULL1, PULL10, newMagnetronView, type MagnetronView } from './ui/magnetronLayout';
 import {
-  ENDING_BUTTON, GEAR_BUTTON, NEWGAME_CANCEL, NEWGAME_ERASE, PAUSE_BUTTONS, SETTINGS_BACK, SLIDERS, TOGGLES, sliderHit, sliderValue, titleButtons,
+  ENDING_BUTTON, GEAR_BUTTON, NEWGAME_CANCEL, NEWGAME_ERASE, PAUSE_BUTTONS, SETTINGS_BACK, STATS_BOX, SLIDERS, TOGGLES, sliderHit, sliderValue, titleButtons,
 } from './ui/menuLayout';
 import { formatNumber, formatShort } from './ui/format';
 import { S } from './ui/strings';
@@ -63,13 +64,15 @@ if (loaded.movedToBackup) fx.banner(S.saveUnreadable.title, S.saveUnreadable.sub
 const events: GameEvent[] = [];
 let cursor: Vec | null = null;
 
-/** title = title screen · newgame = erase confirm over it · run = playing · pause = pause menu · settings (from the title or the pause menu) ·
+/** title = title screen · newgame = erase confirm over it · run = playing · pause = pause menu · stats (Tab, or from the pause menu) ·
+    settings (from the title or the pause menu) ·
     tree = Core tree (browse or spend) · confirm = dialog over the tree · shift = polarity-flip animation · gacha = Magnetron ·
     ending = the thank-you screen after Break the Compass */
-type Screen = 'title' | 'newgame' | 'run' | 'pause' | 'settings' | 'tree' | 'confirm' | 'shift' | 'gacha' | 'ending';
+type Screen = 'title' | 'newgame' | 'run' | 'pause' | 'stats' | 'settings' | 'tree' | 'confirm' | 'shift' | 'gacha' | 'ending';
 let magnetron: MagnetronView | null = null;
 let screen: Screen = debug.skipTitle ? 'run' : 'title'; // debug URL params start the run directly
 let settingsFrom: 'title' | 'pause' = 'title';
+let statsFrom: 'run' | 'pause' = 'run';
 let dragSlider: VolumeId | null = null;
 let tree: TreeView | null = null;
 let shiftAnim = 0;
@@ -127,6 +130,8 @@ function play(fresh: boolean): void {
   save();
 }
 function backToMenu(): void { save(); inGame = false; screen = 'title'; }
+function openStats(from: 'run' | 'pause'): void { statsFrom = from; screen = 'stats'; }
+function closeStats(): void { screen = statsFrom; }
 function openSettings(from: 'title' | 'pause'): void { settingsFrom = from; screen = 'settings'; }
 function closeSettings(): void { dragSlider = null; saveSettings(settings, localStorage); screen = settingsFrom; }
 function setVolume(id: VolumeId, x: number): void {
@@ -166,6 +171,7 @@ if (debug.open === 'shift' && canShift(st)) openTree('shift');
 else if (debug.open === 'browse') openTree('browse');
 else if (debug.open === 'gacha') openMagnetron();
 else if (debug.open === 'ending') openEnding();
+else if (debug.open === 'stats') openStats('run');
 
 // ---- input ----
 function tryBuy(row: number, bulk: boolean): void {
@@ -197,7 +203,9 @@ function menuPointer(p: Vec): boolean {
 }
 function updateCursorStyle(p: Vec): void {
   let pointer = false;
-  if (screen === 'title' || screen === 'newgame' || screen === 'pause' || screen === 'settings') {
+  if (screen === 'stats') {
+    canvas.style.cursor = inRect(p, STATS_BOX) ? 'default' : 'pointer';
+  } else if (screen === 'title' || screen === 'newgame' || screen === 'pause' || screen === 'settings') {
     canvas.style.cursor = menuPointer(p) ? 'pointer' : 'default';
   } else if (screen === 'run') {
     pointer = (inRect(p, PRESTIGE_BUTTON) && prestigeButtonAction(st) !== null) || (inRect(p, MAGNETRON_BUTTON) && magnetronUnlocked(st)) ||
@@ -252,6 +260,7 @@ setupInput(canvas, {
     } else if (screen === 'pause') {
       const b = PAUSE_BUTTONS.find(r => inRect(p, r.rect));
       if (b?.action === 'resume') screen = 'run';
+      else if (b?.action === 'stats') openStats('pause');
       else if (b?.action === 'settings') openSettings('pause');
       else if (b?.action === 'menu') backToMenu();
     } else if (screen === 'settings') {
@@ -260,6 +269,8 @@ setupInput(canvas, {
       const t = TOGGLES.find(r => inRect(p, r.hit));
       if (t?.id === 'screenShake') { settings.screenShake = fx.shakeOn = !settings.screenShake; saveSettings(settings, localStorage); }
       else if (t?.id === 'fullscreen') toggleFullscreen();
+    } else if (screen === 'stats') {
+      if (!inRect(p, STATS_BOX)) closeStats(); // a click outside the panel closes it
     } else if (screen === 'ending') {
       if (endingT > 1.6 && inRect(p, ENDING_BUTTON)) screen = 'run';
     } else if (screen === 'run') {
@@ -302,11 +313,20 @@ setupInput(canvas, {
       return false;
     }
     if (screen === 'newgame') { if (code === 'Escape') screen = 'title'; return false; }
-    if (screen === 'pause') { if (code === 'Escape') screen = 'run'; return false; }
+    if (screen === 'pause') {
+      if (code === 'Escape') screen = 'run';
+      else if (code === 'Tab') { openStats('pause'); return true; }
+      return false;
+    }
+    if (screen === 'stats') {
+      if (code === 'Escape' || code === 'Tab') closeStats();
+      return code === 'Tab';
+    }
     if (screen === 'settings') { if (code === 'Escape') closeSettings(); return false; }
     if (screen === 'ending') { if (endingT > 1.6 && (code === 'Enter' || code === 'Escape')) screen = 'run'; return false; }
     if (screen === 'run') {
       if (code === 'Escape') { screen = 'pause'; return true; }
+      if (code === 'Tab') { openStats('run'); return true; }
       if (code === 'Space') { pulse(); return true; }
       if (code === 'KeyT' && treeUnlocked(st)) openTree('browse');
       if (code === 'KeyP' && canShift(st)) openTree('shift');
@@ -360,7 +380,7 @@ function frame(now: number): void {
   ctx.fillStyle = COLORS.bg;
   ctx.fillRect(0, 0, VIEW.w, VIEW.h);
   const overTitle = screen === 'title' || screen === 'newgame' || (screen === 'settings' && settingsFrom === 'title');
-  const overRun = screen === 'pause' || (screen === 'settings' && settingsFrom === 'pause');
+  const overRun = screen === 'pause' || screen === 'stats' || (screen === 'settings' && settingsFrom === 'pause');
   if (screen === 'ending') drawEnding(ctx, st, cursor, endingT);
   else if (overTitle) {
     const info = { hasRun, savedAgo: savedAt === null ? null : Math.max(0, (Date.now() - savedAt) / 1000), unreadable: loaded.movedToBackup };
@@ -375,6 +395,7 @@ function frame(now: number): void {
     drawGear(ctx, live);
     drawTooltip(ctx, st, live);
     if (screen === 'pause') drawPause(ctx, cursor);
+    if (screen === 'stats') drawStats(ctx, st, fx);
   } else if (screen === 'tree') drawTree(ctx, st, tree, cursor, uiTime);
   else if (screen === 'confirm') drawConfirm(ctx, st, tree, cursor, uiTime);
   else drawShiftAnim(ctx, st, tree, shiftAnim / SHIFT_ANIM, uiTime);

@@ -7,7 +7,7 @@ import { autoBuy, autoPulse } from './automation';
 import { checkGoals } from './goals';
 import { helperMagnets, helperPulling, touchesHelper, updateDrones } from './helpers';
 import { coinValue, earn, goalReward, hasEarned, insurancePayout, interestOn } from './money';
-import { COMBO_SHIELD_COOLDOWN, JACKPOT, bonuses, type Bonuses } from './prestige';
+import { COMBO_SHIELD_COOLDOWN, JACKPOT, bonuses, shiftGoal, type Bonuses } from './prestige';
 import { rand } from './rng';
 import { getStats, upgradeEffect, type Stats } from './stats';
 import type { Coin, GameEvent, GameState, Vec } from './types';
@@ -114,6 +114,7 @@ function updateEvents(st: GameState, S: Stats, b: Bonuses, dt: number, out: Game
   if ((st.nextEvent -= dt) > 0) return;
   const [lo, hi] = EVENTS.every;
   st.nextEvent = (lo + rand(st) * (hi - lo)) / b.eventRateMult;
+  st.stats.events++;
   gainCrystal(st, BOARD.x + BOARD.w / 2, BOARD.y + 100, out, 1);
   const kinds = b.meteorShower ? 3 : 2, pick = Math.floor(rand(st) * kinds);
   if (pick === 0) {
@@ -159,10 +160,11 @@ function collect(st: GameState, S: Stats, b: Bonuses, c: Coin, out: GameEvent[],
     st.combo++;
     st.comboT = b.comboWindow;
     st.stats.bestCombo = Math.max(st.stats.bestCombo, st.combo);
+    st.meta.life.bestCombo = Math.max(st.meta.life.bestCombo, st.combo);
   }
   const value = coinValue(S.value, tierValueOf(c, b), comboMult(st.combo, b.comboMax) * (b.jackpot && rand(st) < JACKPOT.chance ? JACKPOT.mult : 1));
   earn(st, value);
-  if (c.tier !== 'anti') st.stats.caught[c.tier]++;
+  if (c.tier !== 'anti') { st.stats.caught[c.tier]++; st.meta.life.caught[c.tier]++; }
   out.push({ type: 'pickup', coin: c, value });
   if (c.tier === 'prism' && rand(st) < CRYSTALS.prismChance + b.crystalFind) gainCrystal(st, c.x, c.y - 20, out);
   if (c.tier === 'prism' && b.chainReaction) chains.push({ x: c.x, y: c.y });
@@ -245,8 +247,9 @@ function steerToward(c: Coin, m: Vec, dt: number): void {
  * @param out receives everything that happened (pickups, unlocks, goals…)
  */
 export function step(st: GameState, dt: number, magnet: Vec | null, out: GameEvent[] = []): GameEvent[] {
-  const prevT = st.t;
+  const prevT = st.t, earnedBefore = st.totalEarned;
   st.t += dt;
+  st.meta.life.time += dt;
   st.spawnT -= dt;
   updateTimers(st, dt);
   updateUnlocks(st, out);
@@ -276,7 +279,7 @@ export function step(st: GameState, dt: number, magnet: Vec | null, out: GameEve
   for (let i = st.coins.length - 1; i >= 0; i--) {
     const c = st.coins[i]!;
     c.age += dt;
-    if (c.anti && c.age >= ANTI.life) { st.coins.splice(i, 1); continue; } // expires on its own
+    if (c.anti && c.age >= ANTI.life) { st.coins.splice(i, 1); st.meta.life.antiDodged++; continue; } // expires on its own
 
     const drift = S.drift * c.speed * dt;
     if (c.age < SPAWN_TIME) { // appearing: already drifting, but can't be pulled or collected yet
@@ -315,6 +318,7 @@ export function step(st: GameState, dt: number, magnet: Vec | null, out: GameEve
       } else if (b.polarity) { // Polarity bounty: an anti-coin pushed off the board pays like a Prism
         const value = coinValue(S.value, b.prismValue, 1);
         earn(st, value);
+        st.meta.life.antiDodged++;
         out.push({ type: 'pickup', coin: c, value });
       }
     }
@@ -323,5 +327,12 @@ export function step(st: GameState, dt: number, magnet: Vec | null, out: GameEve
   if (b.interest) payInterest(st, S, b, prevT, out);
 
   checkGoals(st, out);
+  recordFastest(st, earnedBefore);
   return out;
+}
+
+/** Lifetime "fastest run to goal": the run time at the step where this run's goal was first reached. */
+function recordFastest(st: GameState, earnedBefore: number): void {
+  const goal = shiftGoal(st.meta), life = st.meta.life;
+  if (earnedBefore < goal && st.totalEarned >= goal && (life.fastest === 0 || st.t < life.fastest)) life.fastest = st.t;
 }

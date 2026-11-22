@@ -1,8 +1,11 @@
 import { EVENTS } from '../data/tuning';
 import { UPGRADES, type UpgradeId } from '../data/upgrades';
-import type { GameState, MetaState } from './types';
+import type { GameState, LifetimeStats, MetaState } from './types';
 
-export const emptyMeta = (): MetaState => ({ cores: 0, coresEarned: 0, shifts: 0, nodes: {}, crystals: 0, lodestones: {}, pity: 0, autoShift: 0, autoBuyOff: false });
+export const emptyLife = (): LifetimeStats =>
+  ({ time: 0, earned: 0, caught: { basic: 0, gold: 0, prism: 0, void: 0 }, bestCombo: 0, goals: 0, pulls: 0, antiDodged: 0, fastest: 0 });
+export const emptyMeta = (): MetaState =>
+  ({ cores: 0, coresEarned: 0, shifts: 0, nodes: {}, crystals: 0, lodestones: {}, pity: 0, autoShift: 0, autoBuyOff: false, life: emptyLife() });
 
 /**
  * A fresh run.
@@ -27,7 +30,7 @@ export function createState(seed = 7, meta: MetaState = emptyMeta(), startMoney 
     unlockOrder: UPGRADES.filter(u => u.unlockAt === 0).map(u => u.id),
     features: { combo: false, pulse: false, anti: false },
     goalsDone: {},
-    stats: { caught: { basic: 0, gold: 0, prism: 0, void: 0 }, missed: 0, anti: 0, bestCombo: 0 },
+    stats: { caught: { basic: 0, gold: 0, prism: 0, void: 0 }, missed: 0, anti: 0, bestCombo: 0, events: 0 },
     nextEvent: EVENTS.first,
     pulseCd: 0,
 

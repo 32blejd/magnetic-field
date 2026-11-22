@@ -8,7 +8,7 @@
    ?rare=1      boost Gold/Prism chances (and Void, if its keystone is owned)
    ?anti=1      boost anti-coin chance (needs earned ≥ 25000)
    ?open=shift  open the Core tree on load (shift = spend Cores, needs the goal earned; browse = preview; gacha = Magnetron;
-                ending = the ending screen)
+                ending = the ending screen; stats = the Stats screen)
    ?nodes=…     own Core tree nodes: comma-separated ids with an optional level (Nkey:3,Wb2), "stage1"/"stage2"/"stage3" for every
                 node up to that stage maxed (opens the next one), or "all" for every node maxed (incl. Break the Compass = endless)
    ?nosave=1    don't load or write the save
@@ -33,7 +33,7 @@ export interface DebugOptions {
   warm: number;
   /** Game clock multiplier (1 = normal). */
   speed: number;
-  open: 'shift' | 'browse' | 'gacha' | 'ending' | null;
+  open: 'shift' | 'browse' | 'gacha' | 'ending' | 'stats' | null;
   /** Node levels to set, or null. */
   nodes: Record<string, number> | null;
 }
@@ -76,7 +76,7 @@ export function readDebugOptions(search: string): DebugOptions {
     pulls: Number(p.get('pulls')) || 0,
     warm: Number(p.get('warm')) || 0,
     speed: Math.min(50, Math.max(1, Number(p.get('speed')) || 1)),
-    open: (['shift', 'browse', 'gacha', 'ending'] as const).find(o => o === p.get('open')) ?? null,
+    open: (['shift', 'browse', 'gacha', 'ending', 'stats'] as const).find(o => o === p.get('open')) ?? null,
     nodes: parseNodes(p.get('nodes')),
   };
 }

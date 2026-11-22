@@ -7,7 +7,7 @@ import {
   bonuses, buyNode, canBuyNode, canShift, commitShift, coresFor, draftSummary, canRefundNode, refundNode, resetDraft, nextCoreAt, nextShiftGoal, nodeVisible, shiftGoal, startDraft, treeUnlocked,
 } from '../src/game/prestige';
 import { nextCost } from '../src/game/shop';
-import { createState, emptyMeta } from '../src/game/state';
+import { createState, emptyLife, emptyMeta } from '../src/game/state';
 import { getStats } from '../src/game/stats';
 import { deserialize, serialize } from '../src/save/save';
 
@@ -116,7 +116,7 @@ describe('Polarity Shift', () => {
     buyNode(draft, NODE_BY_ID.Sb1!);
     buyNode(draft, NODE_BY_ID.Sb2!);
     commitShift(st, draft);
-    expect(st.meta).toEqual({ cores: 5, coresEarned: 10, shifts: 1, nodes: { Sb1: 2, Sb2: 1 }, crystals: 3, lodestones: {}, pity: 0, autoShift: 0, autoBuyOff: false });
+    expect(st.meta).toEqual({ cores: 5, coresEarned: 10, shifts: 1, nodes: { Sb1: 2, Sb2: 1 }, crystals: 3, lodestones: {}, pity: 0, autoShift: 0, autoBuyOff: false, life: emptyLife() });
     expect(st.money).toBe(500); // Head Start 1
     expect(st.totalEarned).toBe(0);
     expect(st.levels.value).toBe(0);
@@ -159,7 +159,7 @@ describe('save with Polarity Shift', () => {
     st.meta.cores = 7; st.meta.shifts = 2;
     st.meta.crystals = 42; st.meta.lodestones = { 'iron-epic': 2 }; st.meta.pity = 7; st.meta.autoShift = 2; st.meta.autoBuyOff = true;
     expect(deserialize(serialize(st))!.meta).toEqual({
-      cores: 7, coresEarned: 20, shifts: 2, nodes: { Nb1: 2, Sb1: 1 }, crystals: 42, lodestones: { 'iron-epic': 2 }, pity: 7, autoShift: 2, autoBuyOff: true,
+      cores: 7, coresEarned: 20, shifts: 2, nodes: { Nb1: 2, Sb1: 1 }, crystals: 42, lodestones: { 'iron-epic': 2 }, pity: 7, autoShift: 2, autoBuyOff: true, life: emptyLife(),
     });
   });
 

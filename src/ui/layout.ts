@@ -20,8 +20,8 @@ export const MAGNETRON_BUTTON: Rect = { x: PANEL.x + PANEL.w - 96, y: PANEL.y + 
 export const AUTO_BUY_BUTTON: Rect = { x: PANEL.x + 72, y: PANEL.y + 74, w: 38, h: 16 };
 /** Pulse widget – bottom-left corner of the board. */
 export const PULSE_WIDGET: Rect = { x: BOARD.x + 12, y: BOARD.y + BOARD.h - 34, w: 150, h: 22 };
-/** Goal tracker – bottom-right corner of the board (anchored at its bottom-right). */
-export const GOALS_ANCHOR: Vec = { x: BOARD.x + BOARD.w - 12, y: BOARD.y + BOARD.h - 12 };
+/** "[Tab] stats" hint – bottom-right corner of the board, level with the Pulse widget (anchored at its right end). */
+export const STATS_HINT_ANCHOR: Vec = { x: BOARD.x + BOARD.w - 12, y: BOARD.y + BOARD.h - 23 };
 
 /** Seven rows fit exactly. */
 export const rowRect = (i: number): Rect => ({ x: PANEL.x + 10, y: PANEL.y + 96 + i * 58, w: PANEL.w - 20, h: 54 });

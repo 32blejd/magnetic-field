@@ -12,6 +12,7 @@ import { rollTier, step } from '../src/game/simulation';
 import { createState, emptyMeta } from '../src/game/state';
 import { getStats } from '../src/game/stats';
 import type { Coin, GameEvent, GameState } from '../src/game/types';
+import { CURRENT_VERSION } from '../src/save/migrations';
 import { deserialize, serialize } from '../src/save/save';
 
 const center = { x: BOARD.x + BOARD.w / 2, y: BOARD.y + BOARD.h / 2 };
@@ -244,7 +245,7 @@ describe('save version 5', () => {
     expect(st.meta.autoBuyOff).toBe(false);
     expect(st.meta.autoShift).toBe(2);
     st.meta.autoBuyOff = true;
-    expect(JSON.parse(serialize(st)).version).toBe(5);
+    expect(JSON.parse(serialize(st)).version).toBe(CURRENT_VERSION);
     expect(deserialize(serialize(st))!.meta.autoBuyOff).toBe(true);
   });
 

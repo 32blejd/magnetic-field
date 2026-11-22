@@ -22,11 +22,14 @@ export const NEWGAME_CANCEL: Rect = { x: NEWGAME_BOX.x + NEWGAME_BOX.w - 200, y:
 /** ⚙ button – top-right corner of the upgrade panel header. */
 export const GEAR_BUTTON: Rect = { x: PANEL.x + PANEL.w - 34, y: PANEL.y + 10, w: 24, h: 24 };
 
-export type PauseAction = 'resume' | 'settings' | 'menu';
-export const PAUSE_BOX: Rect = { x: 330, y: 120, w: 300, h: 290 };
-export const PAUSE_BUTTONS: { action: PauseAction; rect: Rect }[] = (['resume', 'settings', 'menu'] as const).map((action, i) => ({
+export type PauseAction = 'resume' | 'stats' | 'settings' | 'menu';
+export const PAUSE_BOX: Rect = { x: 330, y: 96, w: 300, h: 344 };
+export const PAUSE_BUTTONS: { action: PauseAction; rect: Rect }[] = (['resume', 'stats', 'settings', 'menu'] as const).map((action, i) => ({
   action, rect: { x: PAUSE_BOX.x + 30, y: PAUSE_BOX.y + 86 + i * 54, w: PAUSE_BOX.w - 60, h: 42 },
 }));
+
+/** Stats screen. */
+export const STATS_BOX: Rect = { x: 70, y: 40, w: 820, h: 460 };
 
 /** Ending screen button. */
 export const ENDING_BUTTON: Rect = { x: 960 / 2 - 140, y: 440, w: 280, h: 44 };

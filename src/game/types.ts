@@ -46,6 +46,22 @@ export interface RunStats {
   missed: number;
   anti: number;
   bestCombo: number;
+  /** Events (Burst, Fountain, Meteor Shower) this run. */
+  events: number;
+}
+/** Totals over the whole game – kept across Polarity Shifts (meta.life). Shifts and Cores earned live in meta itself. */
+export interface LifetimeStats {
+  /** Seconds of simulated play. */
+  time: number;
+  earned: number;
+  caught: Record<GoodTierId, number>;
+  bestCombo: number;
+  goals: number;
+  pulls: number;
+  /** Anti-coins that vanished or were pushed off the board without touching the magnet. */
+  antiDodged: number;
+  /** Fastest run from its start to its shift goal (s), 0 = none yet. */
+  fastest: number;
 }
 
 export type FeatureId = 'combo' | 'pulse' | 'anti';
@@ -70,6 +86,8 @@ export interface MetaState {
   autoShift: number;
   /** Auto-buyer paused by the player (the node stays owned). Off = the Auto-buyer runs. */
   autoBuyOff: boolean;
+  /** Lifetime stats (Stats screen). */
+  life: LifetimeStats;
 }
 
 export interface GameState {

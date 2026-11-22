@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { coinValue, earnedShare, hasEarned } from '../src/game/money';
 import { createState } from '../src/game/state';
-import { formatNumber, formatShort, formatUpgradeValue } from '../src/ui/format';
+import { formatDuration, formatNumber, formatShort, formatUpgradeValue } from '../src/ui/format';
 import { clientToView } from '../src/ui/input';
-import { S } from '../src/ui/strings';
+import { STATS_TEXT } from '../src/ui/strings';
 
 describe('number formatting', () => {
   it('uses thousands separators and compact forms', () => {
@@ -14,9 +14,11 @@ describe('number formatting', () => {
     expect(formatUpgradeValue('capacity', 48)).toBe('48 coins');
   });
 
-  it('formats large counters in the HUD line', () => {
-    expect(S.hudLine('3:12', 74, formatNumber(4821), formatNumber(1500)))
-      .toBe('RUN 3:12   CATCH 74%   MISSED 4,821   BEST COMBO 1,500');
+  it('formats long play times for the Stats screen', () => {
+    expect(formatDuration(59)).toBe('0 min');
+    expect(formatDuration(14 * 60 + 5)).toBe('14 min');
+    expect(formatDuration(2 * 3600 + 14 * 60)).toBe('2 h 14 min');
+    expect(STATS_TEXT.goalsDone(formatNumber(5), formatNumber(12))).toBe('5 of 12 done');
   });
 });
 

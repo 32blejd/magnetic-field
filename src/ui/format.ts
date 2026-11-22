@@ -13,6 +13,12 @@ export function formatShort(n: number): string {
 
 export const formatTime = (s: number): string => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
 
+/** Long durations: "14 min", "2 h 14 min". */
+export function formatDuration(s: number): string {
+  const min = Math.floor(s / 60), h = Math.floor(min / 60);
+  return h > 0 ? `${h} h ${min % 60} min` : `${min} min`;
+}
+
 export function formatUpgradeValue(id: UpgradeId, v: number): string {
   switch (id) {
     case 'value': return `${formatNumber(v)} / coin`;

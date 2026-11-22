@@ -27,6 +27,7 @@ export function checkGoals(st: GameState, out: GameEvent[]): void {
   for (const goal of GOALS) {
     if (st.goalsDone[goal.id] || goalProgress(st, goal.metric) < goal.target) continue;
     st.goalsDone[goal.id] = true;
+    st.meta.life.goals++;
     const reward = rewardFor(st, goal);
     earn(st, reward);
     out.push({ type: 'goal', goal, reward });

@@ -24,6 +24,7 @@ export function spend(st: GameState, cost: number): void {
 export function earn(st: GameState, amount: number): void {
   st.money += amount;
   st.totalEarned += amount;
+  st.meta.life.earned += amount;
 }
 
 /** Mini-goal reward: `seconds` of perfect income (every spawned coin caught at the current value). */

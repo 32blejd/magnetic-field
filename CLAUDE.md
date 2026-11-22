@@ -25,7 +25,7 @@ npm run sim:m5 -- [shifts=9] [seeds=3]       # impact of each M5 node on a late 
 
 `npm test` goes through `scripts/vitest.mjs`, which upper-cases the drive letter of the working directory first. On Windows a `c:\…` cwd (e.g. a VS Code terminal) makes Vitest load itself twice and every test fails with "Cannot read properties of undefined (reading 'config')". Don't call `vitest` directly.
 
-Debug URL params (dev or preview): `?nosave=1`, `?reset=1`, `?earned=N`, `?cores=N`, `?shifts=N`, `?crystals=N`, `?pulls=N`, `?open=shift|browse|gacha|ending`, `?warm=N`, `?speed=N`, `?rare=1`, `?anti=1`, `?nodes=Nkey:3,Wb2|stage1..3|all` – see `src/debug.ts`. Any of them skips the title screen (without params the game opens on the title screen).
+Debug URL params (dev or preview): `?nosave=1`, `?reset=1`, `?earned=N`, `?cores=N`, `?shifts=N`, `?crystals=N`, `?pulls=N`, `?open=shift|browse|gacha|ending|stats`, `?warm=N`, `?speed=N`, `?rare=1`, `?anti=1`, `?nodes=Nkey:3,Wb2|stage1..3|all` – see `src/debug.ts`. Any of them skips the title screen (without params the game opens on the title screen).
 
 ## Structure
 
@@ -56,7 +56,7 @@ docs/        # DESIGN.md – game design, numbers, balance tables; docs/mockups/
 
 ## Saving
 
-- `localStorage`, key `magnetic-field-save`, JSON with a `version` field (`save/save.ts`), currently version 5 (v2 added the Polarity Shift `meta`: Cores, shifts, Core tree; v3 added the Magnetron: Charge Crystals, Lodestones, pity counter; v4 added the Auto-shift target `meta.autoShift` and Void coins in the run stats; v5 added the Auto-buyer pause `meta.autoBuyOff`).
+- `localStorage`, key `magnetic-field-save`, JSON with a `version` field (`save/save.ts`), currently version 6 (v2 added the Polarity Shift `meta`: Cores, shifts, Core tree; v3 added the Magnetron: Charge Crystals, Lodestones, pity counter; v4 added the Auto-shift target `meta.autoShift` and Void coins in the run stats; v5 added the Auto-buyer pause `meta.autoBuyOff`; v6 added lifetime stats `meta.life` and `stats.events` for the Stats screen).
 - Loading is tolerant: only currency and levels are required, missing fields fall back to defaults, wrong types reject the save. A save that can't be read (corrupted or from a newer version) is copied to `magnetic-field-save-unreadable` before the game starts fresh, so autosave never destroys it; the player sees a banner.
 - Every change to the saved shape = bump `CURRENT_VERSION` + a migration step in `save/migrations.ts` + a test. Never break old saves.
 - Autosave every 30 s and on `visibilitychange`/`beforeunload`, only while a run is open (never from the title screen), and when leaving to the menu. Export/import as base64 text exists in `save/save.ts` (no UI yet).

@@ -142,11 +142,12 @@ export function drawPause(ctx: Ctx, cursor: Vec | null): void {
   box(ctx, M, COLORS.cyan);
   glow(ctx, COLORS.cyan, 14); text(ctx, MENU.pauseTitle, cx, M.y + 38, { size: 22, weight: 700, color: COLORS.cyan, align: 'center' }); noGlow(ctx);
   text(ctx, MENU.pauseSub, cx, M.y + 62, { size: 10, color: COLORS.sub, align: 'center' });
-  const label = { resume: MENU.resume, settings: MENU.settings, menu: MENU.backToMenu } as const;
+  const label = { resume: MENU.resume, stats: MENU.stats, settings: MENU.settings, menu: MENU.backToMenu } as const;
+  const keys: Partial<Record<keyof typeof label, string>> = { resume: MENU.escKey, stats: MENU.tabKey };
   for (const { action, rect } of PAUSE_BUTTONS) {
-    button(ctx, rect, label[action], { primary: action === 'resume', hover: hov(cursor, rect), key: action === 'resume' ? MENU.escKey : undefined });
+    button(ctx, rect, label[action], { primary: action === 'resume', hover: hov(cursor, rect), key: keys[action] });
   }
-  text(ctx, MENU.pauseFoot, cx, M.y + 262, { size: 10, color: COLORS.sub, align: 'center' });
+  text(ctx, MENU.pauseFoot, cx, M.y + M.h - 28, { size: 10, color: COLORS.sub, align: 'center' });
 }
 
 function slider(ctx: Ctx, label: string, y: number, track: Rect, value: number, hover: boolean): void {

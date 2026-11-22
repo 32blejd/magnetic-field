@@ -1,22 +1,13 @@
-import { GOAL_METRICS } from '../data/goals';
 import { BOARD, PULSE } from '../data/tuning';
 import { bonuses } from '../game/prestige';
-import { antiUnlocked, catchRate, pulseUnlocked } from '../game/abilities';
-import { goalProgress, nextGoal } from '../game/goals';
+import { pulseUnlocked } from '../game/abilities';
 import type { GameState } from '../game/types';
-import { formatNumber, formatTime } from '../ui/format';
-import { GOALS_ANCHOR, PULSE_WIDGET } from '../ui/layout';
-import { S } from '../ui/strings';
+import { formatNumber } from '../ui/format';
+import { PULSE_WIDGET, STATS_HINT_ANCHOR } from '../ui/layout';
+import { S, STATS_TEXT } from '../ui/strings';
 import { glow, noGlow, type Ctx } from './draw';
 import type { Effects } from './effects';
 import { COLORS, FONT } from './theme';
-
-function drawStatsLine(ctx: Ctx, st: GameState): void {
-  const s = st.stats;
-  ctx.fillStyle = 'rgba(95,155,179,.7)'; ctx.font = `11px ${FONT}`; ctx.textBaseline = 'top';
-  ctx.fillText(S.hudLine(formatTime(st.t), Math.round(catchRate(st) * 100), formatNumber(s.missed), formatNumber(s.bestCombo)), BOARD.x + 12, BOARD.y + 10);
-  ctx.textBaseline = 'alphabetic';
-}
 
 function drawPulseWidget(ctx: Ctx, st: GameState): void {
   const { x, y, w, h } = PULSE_WIDGET;
@@ -44,36 +35,17 @@ function drawPulseWidget(ctx: Ctx, st: GameState): void {
   ctx.textBaseline = 'alphabetic';
 }
 
-/** Next unfinished goal per metric, bottom-right of the board. Anti goals appear once anti-coins are unlocked. */
-function drawGoals(ctx: Ctx, st: GameState): void {
-  const lines: { label: string; text: string; done: boolean }[] = [];
-  for (const metric of GOAL_METRICS) {
-    if (metric === 'anti' && !antiUnlocked(st)) continue;
-    const g = nextGoal(st, metric);
-    lines.push({
-      label: S.goalLabel[metric],
-      text: g ? `${formatNumber(Math.min(goalProgress(st, metric), g.target))} / ${formatNumber(g.target)}` : '✓',
-      done: !g,
-    });
-  }
-  const lh = 14, { x, y } = GOALS_ANCHOR, top = y - lines.length * lh - 16;
-  ctx.textAlign = 'right'; ctx.textBaseline = 'top';
-  ctx.fillStyle = COLORS.magenta; ctx.font = `700 10px ${FONT}`; ctx.fillText(S.goalsTitle, x, top);
-  lines.forEach((l, i) => {
-    const ly = top + 16 + i * lh;
-    ctx.font = `10px ${FONT}`;
-    ctx.fillStyle = l.done ? COLORS.amber : 'rgba(230,251,255,.75)';
-    ctx.fillText(l.text, x, ly);
-    const w = ctx.measureText(l.text).width;
-    ctx.fillStyle = COLORS.sub; ctx.fillText(l.label, x - w - 8, ly);
-  });
+/** Where the run stats and mini-goals went: a faint hint in the bottom-right corner of the board. */
+function drawStatsHint(ctx: Ctx): void {
+  const { x, y } = STATS_HINT_ANCHOR;
+  ctx.fillStyle = 'rgba(95,155,179,.55)'; ctx.font = `10px ${FONT}`; ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+  ctx.fillText(STATS_TEXT.boardHint, x, y);
   ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
 }
 
 export function drawHud(ctx: Ctx, st: GameState): void {
-  drawStatsLine(ctx, st);
   drawPulseWidget(ctx, st);
-  drawGoals(ctx, st);
+  drawStatsHint(ctx);
 }
 
 export function drawBanner(ctx: Ctx, fx: Effects): void {

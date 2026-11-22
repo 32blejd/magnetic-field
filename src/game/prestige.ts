@@ -352,6 +352,7 @@ export function commitShift(st: GameState, draft: Draft): void {
     pity: st.meta.pity,
     autoShift: st.meta.autoShift,
     autoBuyOff: st.meta.autoBuyOff,
+    life: { ...st.meta.life, caught: { ...st.meta.life.caught } },
   };
   const b = bonuses(meta);
   Object.assign(st, createState(st.rng, meta, b.headStart));

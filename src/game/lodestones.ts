@@ -37,6 +37,7 @@ export function pull(st: GameState): PullResult | null {
   if (!canPull(st)) return null;
   const m = st.meta;
   m.crystals -= GACHA.pullCost;
+  m.life.pulls++;
   const legendary = legendaryPity(st);
   const forced = !legendary && m.pity + 1 >= GACHA.pity;
   const rarity = legendary ? 'legendary' : rollRarity(st, forced);
